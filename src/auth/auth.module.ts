@@ -4,10 +4,11 @@ import { AuthController } from './auth.controller';
 import { PassportModule } from '@nestjs/passport';
 import { JwtModule } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
-import { Jwt } from 'src/config/configuration';
+import { JwtConfig } from 'src/config/configuration';
 import { UserModule } from 'src/user/user.module';
 import { AccessTokenStrategy } from './strategies/access-token.strategy';
 import { RefreshTokenStrategy } from './strategies/refresh-token.strategy';
+import { MailModule } from 'src/mail/mail.module';
 
 @Module({
   imports: [
@@ -15,7 +16,7 @@ import { RefreshTokenStrategy } from './strategies/refresh-token.strategy';
     JwtModule.registerAsync({
       inject: [ConfigService],
       useFactory: async (configService: ConfigService) => {
-        const jwtConfig = configService.get<Jwt>('passport')
+        const jwtConfig = configService.get<JwtConfig>('passport')
 
         return {
           secret: jwtConfig.access.secret,
@@ -25,7 +26,8 @@ import { RefreshTokenStrategy } from './strategies/refresh-token.strategy';
         }
       }
     }),
-    UserModule
+    UserModule,
+    MailModule
   ],
   controllers: [AuthController],
   providers: [AuthService, AccessTokenStrategy, RefreshTokenStrategy],

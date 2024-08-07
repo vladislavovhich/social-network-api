@@ -1,20 +1,24 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { LoginDto } from './dto/login.dto';
-import { JwtService } from '@nestjs/jwt';
+import { JwtService, TokenExpiredError } from '@nestjs/jwt';
 import { CreateUserDto } from 'src/user/dto/create-user.dto';
 import { UserService } from 'src/user/user.service';
 import * as bcrypt from "bcrypt"
 import { ConfigService } from '@nestjs/config';
-import { Jwt } from 'src/config/configuration';
+import { JwtConfig } from 'src/config/configuration';
+import { MailService } from 'src/mail/mail.service';
+import { UserEntity } from 'src/user/entities/user.entity';
+import { JwtEmail } from './auth.types';
 
 @Injectable()
 export class AuthService {
   constructor (
       private readonly jwtService: JwtService,
       private readonly userService: UserService,
-      private readonly configService: ConfigService
+      private readonly configService: ConfigService,
+      private readonly mailService: MailService
   ) {}
-
+  
   async signUp(createUserDto: CreateUserDto) {
     const isExist = await this.userService.findByEmail(createUserDto.email)
 
@@ -23,12 +27,43 @@ export class AuthService {
     }
     
     const password = await bcrypt.hash(createUserDto.password, 10)
-    const newUser = await this.userService.create({...createUserDto, password})
-    const tokens = this.createTokens(newUser.id)
+    const user = await this.userService.create({...createUserDto, password})
+    const tokens = this.createTokens(user.id)
 
-    await this.updateToken(newUser.id, tokens.refreshToken)
+    await this.updateToken(user.id, tokens.refreshToken)
+    await this.sendConfirmationEmail(user)
+
+    return {user, tokens}
+  }
+
+  async sendConfirmationEmail(user: UserEntity) {
+    if (user.isVerified) {
+        throw new BadRequestException("You've already confirmed your email!")
+    }
     
-    return {user: newUser, tokens}
+    const token = this.createToken({email: user.email}, 'confirm')
+
+    await this.mailService.sendConfirmation(user, token)
+  }
+
+  async confirmEmail(token: string) {
+    try {
+        const payload: JwtEmail = await this.jwtService.verify(token, {
+            secret: this.configService.get<JwtConfig>('passport').confirm.secret
+        })
+
+        if (!payload) {
+            throw new BadRequestException("Something went wrong.")
+        }
+
+        await this.userService.confirmEmail(payload.email)
+    } catch (error: any) {
+        if (error instanceof TokenExpiredError) {
+            throw new BadRequestException("Email confirmation token is expired, you can send a new one.")
+        }
+
+        throw new BadRequestException("Can't confirm your email.")
+    }
   }
 
   async signIn(loginUserDto: LoginDto) {
@@ -69,12 +104,16 @@ export class AuthService {
       await this.userService.updateToken(userId, token)
   }
 
-  createTokens(userId: number) {
-    const passportConfig = this.configService.get<Jwt>('passport')
+  createToken(signIn: any, config: 'access' | 'refresh' | 'confirm') {
+    const passportConfig = this.configService.get<JwtConfig>('passport')
 
+    return this.jwtService.sign(signIn, {secret: passportConfig[config].secret, expiresIn: passportConfig[config].expire})
+  }
+
+  createTokens(userId: number) {
       return {
-          accessToken: this.jwtService.sign({userId}, {secret: passportConfig.access.secret, expiresIn: passportConfig.access.expire}),
-          refreshToken: this.jwtService.sign({userId}, {secret: passportConfig.refresh.secret, expiresIn: passportConfig.refresh.expire})
+          accessToken: this.createToken({userId}, 'access'),
+          refreshToken: this.createToken({userId}, 'refresh')
       }
   }
 }

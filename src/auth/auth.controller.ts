@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, Req, Res, UploadedFile, UseGuards, UseInterceptors } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, Req, Res, UploadedFile, UseGuards, UseInterceptors, Query } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { LoginDto } from './dto/login.dto';
 import { UserService } from 'src/user/user.service';
@@ -8,7 +8,8 @@ import { AccessTokenGuard } from './guards/access-token.guard';
 import { RefreshTokenGuard } from './guards/refresh-token.guard';
 import { Request, Response} from "express"
 import { UserEntity } from 'src/user/entities/user.entity';
-import { ApiTags } from '@nestjs/swagger';
+import { ApiExcludeEndpoint, ApiTags } from '@nestjs/swagger';
+import { CheckVerified } from 'src/common/decorators/check-verified.decorator';
 
 @ApiTags("Auth")
 @Controller('auth')
@@ -21,6 +22,21 @@ export class AuthController {
   @UseGuards(AccessTokenGuard)
   async me(@GetUser() user: UserEntity) {
     return user
+  }
+
+  @Get('confirm')
+  @ApiExcludeEndpoint()
+  async confirmEmail(@Query('token') token: string, @Res({ passthrough: true }) response: Response) { 
+      await this.authService.confirmEmail(token)
+
+      response.status(200).json({message: "Email is successfully confirmed"})
+  }
+
+  @Get('confirm-resend')
+  @UseGuards(AccessTokenGuard)
+  @CheckVerified(false)
+  async sendConfirmEmail(@GetUser() user: UserEntity) { 
+      return await this.authService.sendConfirmationEmail(user)
   }
 
   @Post('signin')
@@ -54,8 +70,8 @@ export class AuthController {
 
   @Get('refresh-token')
   @UseGuards(RefreshTokenGuard)
-  async refreshToken(@Req() req: Request, @GetUser() u: UserEntity, @Res({ passthrough: true }) response: Response) {
-      const tokens = await this.authService.refreshToken(u.id, req.cookies['jwt-refresh'])
+  async refreshToken(@Req() req: Request, @GetUser() user: UserEntity, @Res({ passthrough: true }) response: Response) {
+      const tokens = await this.authService.refreshToken(user.id, req.cookies['jwt-refresh'])
 
       response.cookie("jwt", tokens.accessToken, {httpOnly: true, secure: true})
       response.cookie("jwt-refresh", tokens.refreshToken, {httpOnly: true, secure: true})

@@ -1,9 +1,13 @@
 import { Module } from '@nestjs/common';
 import { UserModule } from './user/user.module';
 import { TypeormModule } from './typeorm/typeorm.module';
-import { ConfigModule } from '@nestjs/config';
+import { ConfigModule, ConfigService } from '@nestjs/config';
 import { AuthModule } from './auth/auth.module';
-import configuration from './config/configuration';
+import configuration, { MailConfig } from './config/configuration';
+import { MailerModule } from '@nestjs-modules/mailer';
+import { MailModule } from './mail/mail.module';
+import { HandlebarsAdapter } from '@nestjs-modules/mailer/dist/adapters/handlebars.adapter'
+import { join } from 'path';
 
 @Module({
   imports: [
@@ -11,8 +15,31 @@ import configuration from './config/configuration';
       load: [configuration],
       isGlobal: true
     }), 
+    MailerModule.forRootAsync({
+      inject: [ConfigService],
+      useFactory: (configService: ConfigService) => {
+        const mailConfig = configService.get<MailConfig>('mail')
+
+        return {
+          transport: {
+            host: mailConfig.host,
+            port: mailConfig.port,
+            auth: {
+              user: mailConfig.user,
+              pass: mailConfig.password,
+            },
+          },
+          template: {
+            adapter: new HandlebarsAdapter(), 
+            options: {
+              strict: true,
+            },
+          },
+        }
+      }
+    }),
     TypeormModule, 
-    UserModule, AuthModule],
+    UserModule, AuthModule, MailModule],
   controllers: [],
   providers: [],
 })
