@@ -1,13 +1,17 @@
 import { ApiProperty } from "@nestjs/swagger";
 import { Type } from "class-transformer";
-import { IsEmail, IsString, IsNotEmpty, IsAlphanumeric, MinLength, MaxLength, IsDate } from "class-validator";
+import { IsEmail, IsString, IsNotEmpty, IsAlphanumeric, MinLength, MaxLength, IsDate, IsOptional } from "class-validator";
 
 export class CreateUserDto {
-    @ApiProperty()
+    @ApiProperty({ type: 'string', format: 'binary', required: false })
+    @IsOptional()
+    file?: Express.Multer.File;
+    
+    @ApiProperty({example: "user@example.com"})
     @IsEmail()
     email: string;
 
-    @ApiProperty()
+    @ApiProperty({example: "starwars"})
     @IsString()
     @IsNotEmpty()
     @IsAlphanumeric()
@@ -15,12 +19,12 @@ export class CreateUserDto {
     @MaxLength(25)
     password: string;
 
-    @ApiProperty()
+    @ApiProperty({example: "usrname123"})
     @IsString()
     @IsNotEmpty()
     username: string;
 
-    @ApiProperty()
+    @ApiProperty({example: "1987-05-04"})
     @IsDate()
     @IsNotEmpty()
     @Type(() => Date)

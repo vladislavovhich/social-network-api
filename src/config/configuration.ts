@@ -1,33 +1,3 @@
-export type DbConfig = {
-    user: string
-    password: string
-    database: string
-    host: string
-    port: number
-}
-
-export type JwtOptions = {
-    expire: string,
-    secret: string
-}
-
-export type JwtConfig = {
-    access: JwtOptions
-    refresh: JwtOptions
-    confirm: JwtOptions
-}
-
-export type MailConfig = {
-    host: string,
-    user: string,
-    password: string,
-    port: number
-}
-
-export type CommonType = {
-    host: string
-}
-
 export default () => ({
     common: {
         host: process.env.HOST_NAME
@@ -58,5 +28,11 @@ export default () => ({
         user: process.env.MAIL_USER,
         password: process.env.MAIL_PASSWORD,
         port: parseInt(process.env.MAIL_PORT)
+    },
+    cloudinary: {
+        apiKey: process.env.CLOUDINARY_API_KEY,
+        apiSecret: process.env.CLOUDINARY_API_SECRET,
+        cloudName: process.env.CLOUDINARY_CLOUD_NAME,
+        folder: process.env.CLOUDINARY_FOLDER_NAME,
     }
 })

@@ -1,6 +1,5 @@
 import { ConfigService } from "@nestjs/config";
-import { DbConfig } from "src/config/configuration";
-import { UserEntity } from "src/user/entities/user.entity";
+import { DbConfig } from "src/config/configuration.types";
 import { DataSource } from "typeorm";
 
 export const provider = {
@@ -23,12 +22,8 @@ export const provider = {
 
             await dataSource.initialize(); 
 
-            console.log('Database connected successfully');
-
             return dataSource;
         } catch (error) {
-            console.log('Error connecting to database');
-
             throw error;
         }
     },

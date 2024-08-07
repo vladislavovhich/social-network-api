@@ -19,6 +19,7 @@ async function bootstrap() {
   
   SwaggerModule.setup('api-docs', app, document);
 
+  app.enableCors();
   app.use(cookieParser());
   app.useGlobalPipes(new ValidationPipe({ transform: true }))
   app.use(bodyParser.urlencoded({extended: true}))

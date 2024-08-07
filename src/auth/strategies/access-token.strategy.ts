@@ -4,9 +4,9 @@ import { ExtractJwt, Strategy } from 'passport-jwt';
 import { extractTokenFromCookies } from 'src/common/helpers/extract-jwt.helper';
 import { UserService } from 'src/user/user.service';
 import { JwtPayload } from '../auth.types';
-import { UserEntity } from 'src/user/entities/user.entity';
+import { User } from 'src/user/entities/user.entity';
 import { ConfigService } from '@nestjs/config';
-import { JwtConfig } from 'src/config/configuration';
+import { JwtConfig } from 'src/config/configuration.types';
 
 @Injectable()
 export class AccessTokenStrategy extends PassportStrategy(Strategy, 'jwt') {
@@ -22,7 +22,7 @@ export class AccessTokenStrategy extends PassportStrategy(Strategy, 'jwt') {
     });
   }
 
-  async validate(payload: JwtPayload): Promise<UserEntity> {
+  async validate(payload: JwtPayload): Promise<User> {
     return await this.userService.findOne(payload.userId)
   }
 }

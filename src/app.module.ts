@@ -3,11 +3,13 @@ import { UserModule } from './user/user.module';
 import { TypeormModule } from './typeorm/typeorm.module';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { AuthModule } from './auth/auth.module';
-import configuration, { MailConfig } from './config/configuration';
+import configuration from './config/configuration';
+import { MailConfig } from './config/configuration.types';
 import { MailerModule } from '@nestjs-modules/mailer';
 import { MailModule } from './mail/mail.module';
 import { HandlebarsAdapter } from '@nestjs-modules/mailer/dist/adapters/handlebars.adapter'
-import { join } from 'path';
+import { ImageModule } from './image/image.module';
+import { CloudinaryModule } from './cloudinary/cloudinary.module';
 
 @Module({
   imports: [
@@ -39,7 +41,7 @@ import { join } from 'path';
       }
     }),
     TypeormModule, 
-    UserModule, AuthModule, MailModule],
+    UserModule, AuthModule, MailModule, ImageModule, CloudinaryModule],
   controllers: [],
   providers: [],
 })

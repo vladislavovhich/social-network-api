@@ -5,9 +5,9 @@ import { CreateUserDto } from 'src/user/dto/create-user.dto';
 import { UserService } from 'src/user/user.service';
 import * as bcrypt from "bcrypt"
 import { ConfigService } from '@nestjs/config';
-import { JwtConfig } from 'src/config/configuration';
+import { JwtConfig } from 'src/config/configuration.types';
 import { MailService } from 'src/mail/mail.service';
-import { UserEntity } from 'src/user/entities/user.entity';
+import { User } from 'src/user/entities/user.entity';
 import { JwtEmail } from './auth.types';
 
 @Injectable()
@@ -36,7 +36,7 @@ export class AuthService {
     return {user, tokens}
   }
 
-  async sendConfirmationEmail(user: UserEntity) {
+  async sendConfirmationEmail(user: User) {
     if (user.isVerified) {
         throw new BadRequestException("You've already confirmed your email!")
     }

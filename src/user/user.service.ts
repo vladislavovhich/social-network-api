@@ -2,20 +2,31 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { DataSource, Not, Repository } from 'typeorm';
-import { UserEntity } from './entities/user.entity';
+import { User } from './entities/user.entity';
+import { ImageService } from 'src/image/image.service';
 
 @Injectable()
 export class UserService {
-  private readonly userRepository: Repository<UserEntity>
+  private readonly userRepository: Repository<User>
 
-  constructor(private dataSource: DataSource) {
-    this.userRepository = this.dataSource.getRepository(UserEntity)
+  constructor(
+    private dataSource: DataSource,
+    private readonly imageService: ImageService
+  ) {
+    this.userRepository = this.dataSource.getRepository(User)
   }
 
   async create(createUserDto: CreateUserDto) {
-    const user = await this.userRepository.create(createUserDto)
+    const userCreated = this.userRepository.create(createUserDto)
+    const user = await this.userRepository.save(userCreated)
 
-    return await this.userRepository.save(user)
+    if (createUserDto.file) {
+      const image = await this.imageService.uploadUserImage(user, createUserDto.file)
+
+      return {...user, pfp: image}
+    }
+
+    return {...user, pfp: null}
   }
 
   async findAll() {
@@ -33,7 +44,9 @@ export class UserService {
       throw new NotFoundException("User not found")
     }
 
-    return user
+    const images = await this.imageService.getUserImages(user)
+
+    return {...user, pfp: images.length ? images.at(-1): null}
   }
 
   async updateToken(id: number, token: string) {
@@ -58,14 +71,18 @@ export class UserService {
 
   async update(id: number, updateUserDto: UpdateUserDto) {
     const user = await this.findOne(id)
-    const userUpdated = this.userRepository.merge(user, updateUserDto)
+    const userMerged = this.userRepository.merge(user, updateUserDto)
+    const userUpdated = await this.userRepository.save(userMerged)
 
-    return await this.userRepository.save(userUpdated)
+    const images = await this.imageService.getUserImages(user)
+
+    return {...userUpdated, pfp: images.length ? images.at(-1): null}
   }
 
   async remove(id: number) {
     await this.findOne(id)
+    await this.userRepository.delete(id)
     
-    return await this.userRepository.delete(id)
+    return "User deleted"
   }
 }

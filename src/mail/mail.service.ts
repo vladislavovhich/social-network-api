@@ -2,8 +2,8 @@ import { MailerService } from '@nestjs-modules/mailer';
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { join } from 'path';
-import { CommonType } from 'src/config/configuration';
-import { UserEntity } from 'src/user/entities/user.entity';
+import { CommonConfig } from 'src/config/configuration.types';
+import { User } from 'src/user/entities/user.entity';
 
 @Injectable()
 export class MailService {
@@ -13,10 +13,10 @@ export class MailService {
         private configService: ConfigService,
         private mailer: MailerService
     ) {
-        this.hostName = this.configService.get<CommonType>('common').host
+        this.hostName = this.configService.get<CommonConfig>('common').host
     }
 
-    async sendConfirmation(user: UserEntity, token: string) {
+    async sendConfirmation(user: User, token: string) {
         const url = `${this.hostName}/auth/confirm?token=${token}`
 
         await this.mailer.sendMail({
