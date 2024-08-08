@@ -1,4 +1,7 @@
-import { Column, CreateDateColumn, Entity, PrimaryGeneratedColumn, UpdateDateColumn } from 'typeorm';
+import { Category } from 'src/category/entities/category.entity';
+import { Group } from 'src/group/entities/group.entity';
+import { Tag } from 'src/tag/entities/tag.entity';
+import { Column, CreateDateColumn, Entity, ManyToMany, OneToMany, PrimaryGeneratedColumn, UpdateDateColumn } from 'typeorm';
 
 @Entity('users')
 export class User {
@@ -19,6 +22,18 @@ export class User {
 
   @Column({nullable: true})
   token: string;
+
+  @OneToMany(() => Tag, (tag) => tag.owner)
+  tags: Tag[]
+
+  @OneToMany(() => Category, (category) => category.owner)
+  categories: Category[]
+
+  @ManyToMany(() => Group, (group) => group.subscribers)
+  groups: Group[]
+
+  @OneToMany(() => Group, (group) => group.admin)
+  groupsAdmin: Group[]
 
   @Column('boolean', {default: false})
   isVerified: boolean

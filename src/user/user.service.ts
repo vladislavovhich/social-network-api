@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { DataSource, Not, Repository } from 'typeorm';
@@ -21,7 +21,7 @@ export class UserService {
     const user = await this.userRepository.save(userCreated)
 
     if (createUserDto.file) {
-      const image = await this.imageService.uploadUserImage(user, createUserDto.file)
+      const image = await this.imageService.uploadImage(user, createUserDto.file)
 
       return {...user, pfp: image}
     }
@@ -44,7 +44,7 @@ export class UserService {
       throw new NotFoundException("User not found")
     }
 
-    const images = await this.imageService.getUserImages(user)
+    const images = await this.imageService.getImages(user)
 
     return {...user, pfp: images.length ? images.at(-1): null}
   }
@@ -74,8 +74,8 @@ export class UserService {
     const userMerged = this.userRepository.merge(user, updateUserDto)
     const userUpdated = await this.userRepository.save(userMerged)
 
-    const images = await this.imageService.getUserImages(user)
-
+    const images = await this.imageService.getImages(user)
+ 
     return {...userUpdated, pfp: images.length ? images.at(-1): null}
   }
 

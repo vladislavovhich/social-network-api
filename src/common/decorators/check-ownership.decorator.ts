@@ -1,12 +1,5 @@
 import { SetMetadata, applyDecorators } from '@nestjs/common';
-import { User } from 'src/user/entities/user.entity';
-import { Image } from 'src/image/entities/image.entity';
-
-export const Models = {
-    User, Image
-}
-
-export type resType = "User" | "Image"
+import { resType } from 'src/image/image.types';
 
 export const CheckOwnership = (resourceType: resType, ownerKey = "ownerId") => {
     return applyDecorators(

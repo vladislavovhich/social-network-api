@@ -1,8 +1,8 @@
-import { Injectable, CanActivate, ExecutionContext, UnauthorizedException, ForbiddenException } from "@nestjs/common";
+import { Injectable, CanActivate, ExecutionContext, UnauthorizedException, ForbiddenException, NotFoundException } from "@nestjs/common";
 import { Reflector } from "@nestjs/core";
 import { User } from "src/user/entities/user.entity";
 import { UserService } from "src/user/user.service";
-import { Models, } from "../decorators/check-ownership.decorator";
+import { Models } from "src/image/image.types";
 import { DataSource } from "typeorm";
 
 @Injectable()
@@ -30,7 +30,13 @@ export class OwnershipGuard implements CanActivate {
         const resourceRepository = this.dataSource.getRepository(Models[resourceType])
         const resource = await resourceRepository.findOne({where: {id: resourceId}})
 
-        if (!resource || resource[ownerKey] !== user.id) {
+        if (!resource) {
+            throw new NotFoundException(`${resourceType} not found!`)
+        }
+        
+        if (!resource || (typeof resource[ownerKey] == "object" && resource[ownerKey].id !== user.id)) {
+            throw new ForbiddenException('Access denied');
+        } else if (!resource || (typeof resource[ownerKey] != "object" && resource[ownerKey] !== user.id)) {
             throw new ForbiddenException('Access denied');
         }
 
