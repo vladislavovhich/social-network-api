@@ -21,7 +21,7 @@ export class UserService {
     const user = await this.userRepository.save(userCreated)
 
     if (createUserDto.file) {
-      const image = await this.imageService.uploadImage(user, createUserDto.file)
+      const image = await this.imageService.uploadImage(user, 'User', createUserDto.file)
 
       return {...user, pfp: image}
     }
@@ -44,7 +44,7 @@ export class UserService {
       throw new NotFoundException("User not found")
     }
 
-    const images = await this.imageService.getImages(user)
+    const images = await this.imageService.getImages(user, 'User')
 
     return {...user, pfp: images.length ? images.at(-1): null}
   }
@@ -74,7 +74,13 @@ export class UserService {
     const userMerged = this.userRepository.merge(user, updateUserDto)
     const userUpdated = await this.userRepository.save(userMerged)
 
-    const images = await this.imageService.getImages(user)
+    const images = await this.imageService.getImages(user, 'User')
+
+    if (updateUserDto.file) {
+      const image = await this.imageService.uploadImage(user, 'User', updateUserDto.file)
+      
+      images.push(image)
+    }
  
     return {...userUpdated, pfp: images.length ? images.at(-1): null}
   }

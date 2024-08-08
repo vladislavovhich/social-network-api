@@ -7,6 +7,7 @@ import { CategoryModule } from 'src/category/category.module';
 @Module({
   controllers: [GroupController],
   providers: [GroupService],
-  imports: [ImageModule, CategoryModule]
+  imports: [ImageModule, CategoryModule],
+  exports: [GroupService]
 })
 export class GroupModule {}

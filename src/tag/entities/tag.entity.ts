@@ -10,7 +10,7 @@ export class Tag {
     @Column()
     name: string
 
-    @ManyToOne(() => User, (user) => user.tags, { eager: true })
+    @ManyToOne(() => User, (user) => user.tags, {eager: true})
     owner: User
 
     @ManyToMany(() => Post, (post) => post.tags)

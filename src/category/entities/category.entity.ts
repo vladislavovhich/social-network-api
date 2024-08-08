@@ -10,7 +10,7 @@ export class Category {
     @Column()
     name: string
 
-    @ManyToOne(() => User, (user) => user.categories)
+    @ManyToOne(() => User, (user) => user.categories, {eager: true})
     owner: User
 
     @ManyToMany(() => Group, (group) => group.categories)

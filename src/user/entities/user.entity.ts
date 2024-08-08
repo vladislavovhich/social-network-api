@@ -1,5 +1,6 @@
 import { Category } from 'src/category/entities/category.entity';
 import { Group } from 'src/group/entities/group.entity';
+import { Post } from 'src/post/entities/post.entity';
 import { Tag } from 'src/tag/entities/tag.entity';
 import { Column, CreateDateColumn, Entity, ManyToMany, OneToMany, PrimaryGeneratedColumn, UpdateDateColumn } from 'typeorm';
 
@@ -28,6 +29,9 @@ export class User {
 
   @OneToMany(() => Category, (category) => category.owner)
   categories: Category[]
+
+  @OneToMany(() => Post, (post) => post.publisher)
+  posts: Post[]
 
   @ManyToMany(() => Group, (group) => group.subscribers)
   groups: Group[]

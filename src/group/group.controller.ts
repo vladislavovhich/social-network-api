@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, UseInterceptors, UploadedFile } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, UseInterceptors, UploadedFile, Put } from '@nestjs/common';
 import { GroupService } from './group.service';
 import { CreateGroupDto } from './dto/create-group.dto';
 import { UpdateGroupDto } from './dto/update-group.dto';
@@ -8,11 +8,25 @@ import { AccessTokenGuard } from 'src/auth/guards/access-token.guard';
 import { multerOptions } from 'src/config/multer.config';
 import { User } from 'src/user/entities/user.entity';
 import { GetUser } from 'src/common/decorators/extract-user.decorator';
+import { CheckOwnership } from 'src/common/decorators/check-ownership.decorator';
+import { OwnershipGuard } from 'src/common/guards/check-ownership.guard';
 
 @ApiTags('Group')
 @Controller('groups')
 export class GroupController {
   constructor(private readonly groupService: GroupService) {}
+
+  @Put(':id/subscribe')
+  @UseGuards(AccessTokenGuard)
+  subscribe(@Param('id') id: string, @GetUser() user: User) {
+    return this.groupService.subscribe(+id, user)
+  }
+
+  @Put(':id/unsubscribe')
+  @UseGuards(AccessTokenGuard)
+  unsubscribe(@Param('id') id: string, @GetUser() user: User) {
+    return this.groupService.unsubscribe(+id, user)
+  }
 
   @Post()
   @ApiConsumes("multipart/form-data")
@@ -37,6 +51,8 @@ export class GroupController {
 
   @Patch(':id')
   @ApiConsumes("multipart/form-data")
+  @CheckOwnership('Group', 'admin')
+  @UseGuards(OwnershipGuard)
   @UseGuards(AccessTokenGuard)
   @UseInterceptors(FileInterceptor('file', multerOptions))
   update(@Param('id') id: string, @Body() updateGroupDto: UpdateGroupDto, @UploadedFile() file: Express.Multer.File, @GetUser() user: User) {
@@ -47,6 +63,9 @@ export class GroupController {
   }
 
   @Delete(':id')
+  @CheckOwnership('Group', 'admin')
+  @UseGuards(OwnershipGuard)
+  @UseGuards(AccessTokenGuard)
   remove(@Param('id') id: string) {
     return this.groupService.remove(+id);
   }
