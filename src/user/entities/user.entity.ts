@@ -5,6 +5,7 @@ import { Image } from 'src/image/entities/image.entity';
 import { Post } from 'src/post/entities/post.entity';
 import { Tag } from 'src/tag/entities/tag.entity';
 import { View } from 'src/view/entities/view.entity';
+import { Vote } from 'src/vote/entities/vote.entity';
 import { Column, CreateDateColumn, Entity, JoinTable, ManyToMany, OneToMany, PrimaryGeneratedColumn, UpdateDateColumn } from 'typeorm';
 
 @Entity('users')
@@ -28,6 +29,9 @@ export class User {
 
   @OneToMany(() => View, (view) => view.viewer)
   views: View[]
+
+  @OneToMany(() => Vote, (vote) => vote.voter)
+  votes: Vote[]
 
   @Column({ type: 'date', default: () => "CURRENT_TIMESTAMP"})
   birthDate: Date

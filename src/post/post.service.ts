@@ -6,6 +6,9 @@ import { GroupService } from 'src/group/group.service';
 import { Post } from './entities/post.entity';
 import { TagService } from 'src/tag/tag.service';
 import { ImageService } from 'src/image/image.service';
+import { User } from 'src/user/entities/user.entity';
+import { VoteService } from 'src/vote/vote.service';
+import { VoteOperationDto } from 'src/vote/dto/vote-operation.dto';
 
 @Injectable()
 export class PostService {
@@ -15,7 +18,8 @@ export class PostService {
     private dataSource: DataSource,
     private readonly groupService: GroupService,
     private readonly tagService: TagService,
-    private readonly imageService: ImageService
+    private readonly imageService: ImageService,
+    private readonly voteService: VoteService
   ) {
     this.postRepository = this.dataSource.getRepository(Post)
   }
@@ -42,24 +46,33 @@ export class PostService {
   }
 
   async findOne(id: number) {
-    const post = await this.postRepository.findOne({
-      where: {id}, 
-      relations: {
-        tags: true,
-        views: true
-      },
-      select: {
-        views: {
-          id: true
-        }
-      }
-    })
-    
+    const postRaw = await this.postRepository.createQueryBuilder("post")
+      .leftJoin("post.views", "views")
+      .leftJoinAndSelect("post.tags", "tags")
+      .leftJoinAndSelect("post.images", "images")
+      .leftJoinAndSelect("post.publisher", "publisher")
+      .loadRelationCountAndMap('post.views', 'post.views')
+      .leftJoinAndSelect('post.votes', 'votes')
+      .addSelect('SUM(votes.value)', 'votes')
+      .where("post.id = :id", {id})
+      .groupBy('post.id')
+      .addGroupBy('tags.id')
+      .addGroupBy('images.id')
+      .addGroupBy('publisher.id')
+      .addGroupBy('votes.id')
+      .getRawAndEntities() 
+
+    const post = postRaw.entities[0]
+
+    console.log(postRaw)
+
+    post.rating = +postRaw.raw.reduceRight((prev, cur) => prev + +cur['votes'], 0)
+
     if (!post) {
       throw new NotFoundException("Post not found!")
     }
 
-    return {...post, viewsAmount: post.views.length}
+    return post
   }
 
   async update(id: number, updatePostDto: UpdatePostDto) {
@@ -93,5 +106,31 @@ export class PostService {
     await this.groupService.findOne(id)
     
     return await this.postRepository.find({where: {group: {id}}})
+  }
+
+  async vote(postId: number, user: User, value: -1 | 1) {
+    const post = await this.postRepository.findOne({
+      where: {id: postId},
+      relations: {
+        votes: true
+      }
+    })
+
+    const voteIndex = post.votes.findIndex(v => v.voter.id == user.id)
+
+    if (voteIndex == -1) {
+      const vote = await this.voteService.create(new VoteOperationDto(user, value))
+
+      post.votes.push(vote)
+    } else {
+      const vote = await this.voteService.update(post.votes[voteIndex].id, new VoteOperationDto(user, value))
+
+      post.votes[voteIndex] = vote
+    }
+
+    console.log(value, voteIndex)
+    await this.postRepository.save(post)
+
+    return await this.findOne(postId)
   }
 }

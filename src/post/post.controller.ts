@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, UseInterceptors, UploadedFile, UploadedFiles } from '@nestjs/common';
+import { Controller, Get, Post, Body, Put, Patch, Param, Delete, UseGuards, UseInterceptors, UploadedFile, UploadedFiles } from '@nestjs/common';
 import { PostService } from './post.service';
 import { CreatePostDto } from './dto/create-post.dto';
 import { UpdatePostDto } from './dto/update-post.dto';
@@ -43,6 +43,18 @@ export class PostController {
   @Get('/posts/:id')
   findOne(@Param('id') id: string) {
     return this.postService.findOne(+id);
+  }
+
+  @Put('/posts/:id/upvote')
+  @UseGuards(AccessTokenGuard)
+  upvotePost(@Param('id') id: string, @GetUser() user: User) {
+    return this.postService.vote(+id, user, 1);
+  }
+
+  @Put('/posts/:id/downvote')
+  @UseGuards(AccessTokenGuard)
+  donwvotePost(@Param('id') id: string, @GetUser() user: User) {
+    return this.postService.vote(+id, user, -1);
   }
 
   @Patch('/posts/:id')

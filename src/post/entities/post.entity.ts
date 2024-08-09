@@ -4,6 +4,7 @@ import { User } from "src/user/entities/user.entity";
 import { Image } from "src/image/entities/image.entity";
 import { View } from "src/view/entities/view.entity";
 import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, JoinTable, ManyToMany, ManyToOne, OneToMany } from "typeorm";
+import { Vote } from "src/vote/entities/vote.entity";
 
 @Entity('posts')
 export class Post {
@@ -24,6 +25,10 @@ export class Post {
     @JoinTable({name: "posts_tags"})
     tags: Tag[]
 
+    @ManyToMany(() => Vote)
+    @JoinTable({name: "posts_votes"})
+    votes: Vote[]
+
     @ManyToOne(() => User, (user) => user.posts, {eager: true})
     publisher: User
 
@@ -35,4 +40,6 @@ export class Post {
 
     @UpdateDateColumn()
     updated_at: Date;
+
+    rating: number
 }
