@@ -10,6 +10,7 @@ import { User } from 'src/user/entities/user.entity';
 import { GetUser } from 'src/common/decorators/extract-user.decorator';
 import { CheckOwnership } from 'src/common/decorators/check-ownership.decorator';
 import { OwnershipGuard } from 'src/common/guards/check-ownership.guard';
+import { SubscriberGuard } from './guards/is-subscriber.guard';
 
 @ApiTags("Post")
 @Controller('/')
@@ -18,6 +19,7 @@ export class PostController {
 
   @Post('/groups/:id/posts')
   @ApiConsumes("multipart/form-data")
+  @UseGuards(SubscriberGuard)
   @UseGuards(AccessTokenGuard)
   @UseInterceptors(FilesInterceptor('files', 10, multerOptions))
   create(@Param('id') id: string, @Body() createPostDto: CreatePostDto, @GetUser() user: User, @UploadedFiles() files: Express.Multer.File[]) {
@@ -26,6 +28,11 @@ export class PostController {
     createPostDto.files = files
 
     return this.postService.create(createPostDto);
+  }
+
+  @Get('/groups/:id/posts')
+  getGroupPosts(@Param('id') id: string) {
+    return this.postService.getGroupPosts(+id)
   }
 
   @Get('/posts')

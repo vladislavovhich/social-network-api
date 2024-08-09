@@ -4,11 +4,12 @@ import { UpdateUserDto } from './dto/update-user.dto';
 import { DataSource, Not, Repository } from 'typeorm';
 import { User } from './entities/user.entity';
 import { ImageService } from 'src/image/image.service';
+import { Image } from 'src/image/entities/image.entity';
 
 @Injectable()
 export class UserService {
   private readonly userRepository: Repository<User>
-
+ 
   constructor(
     private dataSource: DataSource,
     private readonly imageService: ImageService
@@ -17,16 +18,20 @@ export class UserService {
   }
 
   async create(createUserDto: CreateUserDto) {
-    const userCreated = this.userRepository.create(createUserDto)
-    const user = await this.userRepository.save(userCreated)
+    const userPlain = this.userRepository.create(createUserDto)
+    const images: Image[] = []
 
     if (createUserDto.file) {
-      const image = await this.imageService.uploadImage(user, 'User', createUserDto.file)
+      const image = await this.imageService.uploadImage(createUserDto.file)
 
-      return {...user, pfp: image}
+      images.push(image)
     }
 
-    return {...user, pfp: null}
+    userPlain.images = images
+
+    const user = await this.userRepository.save(userPlain)
+
+    return user
   }
 
   async findAll() {
@@ -44,9 +49,7 @@ export class UserService {
       throw new NotFoundException("User not found")
     }
 
-    const images = await this.imageService.getImages(user, 'User')
-
-    return {...user, pfp: images.length ? images.at(-1): null}
+    return user
   }
 
   async updateToken(id: number, token: string) {
@@ -72,17 +75,19 @@ export class UserService {
   async update(id: number, updateUserDto: UpdateUserDto) {
     const user = await this.findOne(id)
     const userMerged = this.userRepository.merge(user, updateUserDto)
-    const userUpdated = await this.userRepository.save(userMerged)
-
-    const images = await this.imageService.getImages(user, 'User')
+    const images: Image[] = user.images
 
     if (updateUserDto.file) {
-      const image = await this.imageService.uploadImage(user, 'User', updateUserDto.file)
+      const image = await this.imageService.uploadImage(updateUserDto.file)
       
       images.push(image)
     }
+
+    userMerged.images = images
+
+    const userUpdated = await this.userRepository.save(userMerged)
  
-    return {...userUpdated, pfp: images.length ? images.at(-1): null}
+    return userUpdated
   }
 
   async remove(id: number) {

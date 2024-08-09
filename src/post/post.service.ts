@@ -27,15 +27,14 @@ export class PostService {
     const tags = await this.tagService.handleTags(tagNames, publisher)
 
     const postPlain = this.postRepository.create({text, group, publisher, tags}) 
-    const post = await this.postRepository.save(postPlain)
 
     if (files) {
-      const images = await this.imageService.uploadManyImages(post, 'Post', files)
+      const images = await this.imageService.uploadManyImages(files)
 
-      return {...post, images}
+      postPlain.images = images
     }
 
-    return {...post, images: []} 
+    return await this.postRepository.save(postPlain)
   }
 
   async findAll() {
@@ -43,15 +42,24 @@ export class PostService {
   }
 
   async findOne(id: number) {
-    const post = await this.postRepository.findOne({where: {id}, relations: {tags: true}})
-  
+    const post = await this.postRepository.findOne({
+      where: {id}, 
+      relations: {
+        tags: true,
+        views: true
+      },
+      select: {
+        views: {
+          id: true
+        }
+      }
+    })
+    
     if (!post) {
       throw new NotFoundException("Post not found!")
     }
 
-    const images = await this.imageService.getImages(post, 'Post')
-
-    return {...post, images}
+    return {...post, viewsAmount: post.views.length}
   }
 
   async update(id: number, updatePostDto: UpdatePostDto) {
@@ -59,7 +67,7 @@ export class PostService {
     const post = await this.findOne(id)
   
     if (files) {
-      const images = await this.imageService.uploadManyImages(post, 'Post', files)
+      const images = await this.imageService.uploadManyImages(files)
 
       post.images = [...post.images, ...images]
     }
@@ -75,7 +83,15 @@ export class PostService {
     return await this.postRepository.save(post)
   }
 
-  remove(id: number) {
-    return `This action removes a #${id} post`;
+  async remove(id: number) {
+    await this.findOne(id)
+
+    return await this.postRepository.delete(id)
+  }
+
+  async getGroupPosts(id: number) {
+    await this.groupService.findOne(id)
+    
+    return await this.postRepository.find({where: {group: {id}}})
   }
 }

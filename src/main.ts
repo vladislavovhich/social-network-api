@@ -24,6 +24,7 @@ async function bootstrap() {
   app.useGlobalPipes(new ValidationPipe({ transform: true }))
   app.use(bodyParser.urlencoded({extended: true}))
   app.use(bodyParser.json())
+  app.useGlobalInterceptors(new ClassSerializerInterceptor(app.get(Reflector)));
   
   await app.listen(3000);
 }

@@ -7,10 +7,4 @@ export class Image {
 
     @Column()
     url: string
-
-    @Column()
-    ownerType: string
-
-    @Column()
-    ownerId: number
 }

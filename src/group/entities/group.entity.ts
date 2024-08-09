@@ -1,6 +1,7 @@
 import { Category } from "src/category/entities/category.entity";
 import { Post } from "src/post/entities/post.entity";
 import { User } from "src/user/entities/user.entity";
+import { Image } from "src/image/entities/image.entity";
 import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, CreateDateColumn, UpdateDateColumn, JoinTable, ManyToMany, OneToMany } from "typeorm";
 
 @Entity('groups')
@@ -17,6 +18,10 @@ export class Group {
     @ManyToMany(() => User, (user) => user.groups)
     @JoinTable({name: "users_groups"})
     subscribers: User[]
+
+    @ManyToMany(() => Image, {eager: true})
+    @JoinTable({name: "groups_images"})
+    images: Image[]
 
     @OneToMany(() => Post, (post) => post.group)
     posts: Post[]

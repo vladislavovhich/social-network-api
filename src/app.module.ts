@@ -14,6 +14,7 @@ import { TagModule } from './tag/tag.module';
 import { CategoryModule } from './category/category.module';
 import { PostModule } from './post/post.module';
 import { GroupModule } from './group/group.module';
+import { ViewModule } from './view/view.module';
 
 @Module({
   imports: [
@@ -45,7 +46,7 @@ import { GroupModule } from './group/group.module';
       }
     }),
     TypeormModule, 
-    UserModule, AuthModule, MailModule, ImageModule, CloudinaryModule, TagModule, CategoryModule, PostModule, GroupModule],
+    UserModule, AuthModule, MailModule, ImageModule, CloudinaryModule, TagModule, CategoryModule, PostModule, GroupModule, ViewModule],
   controllers: [],
   providers: [],
 })

@@ -57,13 +57,17 @@ export class GroupService {
       admin: createGroupDto.admin,
       categories
     })
-    const group = await this.groupRepository.save(groupPlain)
+    const images: Image[] = []
 
     if (createGroupDto.file) {
-      const image = await this.imageService.uploadImage(group, 'Group', createGroupDto.file)
+      const image = await this.imageService.uploadImage(createGroupDto.file)
 
-      return {...group, pfp: image, images: [image]}
+      images.push(image)
     }
+
+    groupPlain.images = images
+
+    const group = await this.groupRepository.save(groupPlain)
 
     return group
   }
@@ -73,28 +77,24 @@ export class GroupService {
   }
 
   async findOne(id: number) {
-    const group = await this.groupRepository.findOne({where: {id}})
+    const group = await this.groupRepository.findOne({
+      where: {id}, 
+      relations: {subscribers: true}
+    })
 
     if (!group) {
       throw new NotFoundException("Group not found!")
     }
 
-    const images = await this.findImages(group)
-
-    return {...group, pfp: images.length ? images.at(-1) : null, images}
+    return group
   }
 
-  async findImages(group: Group) {
-    const images = await this.imageService.getImages(group, 'Group')
-
-    return images
-  }
 
   async update(id: number, updateGroupDto: UpdateGroupDto) {
     const group = await this.findOne(id)
     
     if (updateGroupDto.file) {
-      const image = await this.imageService.uploadImage(group, 'Group', updateGroupDto.file)
+      const image = await this.imageService.uploadImage(updateGroupDto.file)
 
       group.images.push(image)
     }

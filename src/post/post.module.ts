@@ -8,6 +8,7 @@ import { TagModule } from 'src/tag/tag.module';
 @Module({
   controllers: [PostController],
   providers: [PostService],
-  imports: [GroupModule, ImageModule, TagModule]
+  imports: [GroupModule, ImageModule, TagModule],
+  exports: [PostService]
 })
 export class PostModule {}
