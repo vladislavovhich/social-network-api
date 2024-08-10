@@ -7,10 +7,11 @@ import { AccessTokenGuard } from './guards/access-token.guard';
 import { RefreshTokenGuard } from './guards/refresh-token.guard';
 import { Request, Response} from "express"
 import { User } from 'src/user/entities/user.entity';
-import { ApiConsumes, ApiExcludeEndpoint, ApiTags } from '@nestjs/swagger';
+import { ApiConsumes, ApiExcludeEndpoint, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { CheckVerified } from 'src/common/decorators/check-verified.decorator';
 import { multerOptions } from 'src/config/multer.config';
 import { FileInterceptor } from '@nestjs/platform-express';
+import { UserProfileDto } from 'src/user/dto/user-profile.dto';
 
 @ApiTags("Auth")
 @Controller('auth')
@@ -26,23 +27,29 @@ export class AuthController {
     }
 
     @Get('confirm-resend')
+    @ApiResponse({ status: 200, description: "Confirmation email is sended" })
+    @ApiResponse({ status: 400, description: "User is already verified" })
     @UseGuards(AccessTokenGuard)
     @CheckVerified(false)
     async sendConfirmEmail(@GetUser() user: User) { 
         return await this.authService.sendConfirmationEmail(user)
     }
 
-    @Post('signin')
+    @Post('sign-in')
+    @ApiResponse({ status: 200, type: UserProfileDto, description: "User profile" })
+    @ApiResponse({ status: 400, description: "Incorrect login or password" })
     async signIn(@Body() loginDto: LoginDto, @Res({ passthrough: true }) response: Response) { 
         const result = await this.authService.signIn(loginDto)
 
         response.cookie("jwt", result.tokens.accessToken, {httpOnly: true, secure: true})
         response.cookie("jwt-refresh", result.tokens.refreshToken, {httpOnly: true, secure: true})
 
-        return result
+        return result.user
     }
 
-    @Post('signup') 
+    @Post('sign-up') 
+    @ApiResponse({ status: 200, type: UserProfileDto, description: "User profile" })
+    @ApiResponse({ status: 400, description: "Email is already taken | incorrect input data" })
     @ApiConsumes("multipart/form-data")
     @UseInterceptors(FileInterceptor('file', multerOptions))
     async signUp(@Body() createUserDto: CreateUserDto, @Res({ passthrough: true }) response: Response,  @UploadedFile() file: Express.Multer.File) {
@@ -56,7 +63,9 @@ export class AuthController {
         return result.user
     }
 
-    @Get('logout') 
+    @Get('log-out') 
+    @ApiResponse({ status: 200, description: "Successfully logged out" })
+    @ApiResponse({ status: 401, description: "User not authorized" })
     @UseGuards(AccessTokenGuard)
     logout(@Res({ passthrough: true }) response: Response) {
         response.clearCookie('jwt')
@@ -66,6 +75,8 @@ export class AuthController {
     }
 
     @Get('refresh-token')
+    @ApiResponse({ status: 200, description: "Tokens are refreshed" })
+    @ApiResponse({ status: 401, description: "User not authorized" })
     @UseGuards(RefreshTokenGuard)
     async refreshToken(@Req() req: Request, @GetUser() user: User, @Res({ passthrough: true }) response: Response) {
         const tokens = await this.authService.refreshToken(user.id, req.cookies['jwt-refresh'])

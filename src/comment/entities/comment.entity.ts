@@ -12,10 +12,10 @@ export class Comment {
     @Column()
     text: string;
 
-    @ManyToOne(() => User, (user) => user.comments, {eager: true})
+    @ManyToOne(() => User, (user) => user.comments, {eager: true, onDelete: "SET NULL"})
     commenter: User
 
-    @ManyToOne(() => Post, (post) => post.comments)
+    @ManyToOne(() => Post, (post) => post.comments, {onDelete: "SET NULL"})
     post: Post
 
     @ManyToMany(() => Vote)

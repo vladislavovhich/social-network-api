@@ -7,10 +7,10 @@ export class View {
     @PrimaryGeneratedColumn()
     id: number;
 
-    @ManyToOne(() => User, (user) => user.views)
+    @ManyToOne(() => User, (user) => user.views, {onDelete: "SET NULL"})
     viewer: User
 
-    @ManyToOne(() => Post, (post) => post.views)
+    @ManyToOne(() => Post, (post) => post.views, {onDelete: "SET NULL"})
     post: Post
 
     @CreateDateColumn()

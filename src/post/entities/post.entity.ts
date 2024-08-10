@@ -46,4 +46,6 @@ export class Post {
     updated_at: Date;
 
     rating: number
+    watched: number
+    totalComments: number
 }

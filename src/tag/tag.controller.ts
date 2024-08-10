@@ -2,14 +2,14 @@ import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards } from '@n
 import { TagService } from './tag.service';
 import { CreateTagDto } from './dto/create-tag.dto';
 import { UpdateTagDto } from './dto/update-tag.dto';
-import { ApiTags } from '@nestjs/swagger';
+import { ApiExcludeController, ApiTags } from '@nestjs/swagger';
 import { User } from 'src/user/entities/user.entity';
 import { GetUser } from 'src/common/decorators/extract-user.decorator';
 import { AccessTokenGuard } from 'src/auth/guards/access-token.guard';
 import { CheckOwnership } from 'src/common/decorators/check-ownership.decorator';
 import { OwnershipGuard } from 'src/common/guards/check-ownership.guard';
 
-@ApiTags("Tag")
+@ApiExcludeController()
 @Controller('tags')
 export class TagController {
   constructor(private readonly tagService: TagService) {}

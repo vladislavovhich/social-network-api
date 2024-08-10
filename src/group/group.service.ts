@@ -21,7 +21,7 @@ export class GroupService {
   }
 
   isSubscribed(group: Group, user: User) {
-    return group.subscribers.some(subs => subs.id == user.id)
+    return group.subscribers.some(subs => subs && subs.id == user.id)
   }
 
   async subscribe(groupId: number, user: User) {
@@ -33,7 +33,9 @@ export class GroupService {
 
     group.subscribers.push(user)
 
-    return await this.groupRepository.save(group)
+    await this.groupRepository.save(group)
+
+    return "Subscribed to group"
   }
 
   async unsubscribe(groupId: number, user: User) {
@@ -45,7 +47,7 @@ export class GroupService {
 
     group.subscribers = group.subscribers.filter(sub => sub.id != user.id)
 
-    return await this.groupRepository.save(group)
+    return "Unsubscribed to group"
   }
 
   async create(createGroupDto: CreateGroupDto) {
@@ -69,7 +71,7 @@ export class GroupService {
 
     const group = await this.groupRepository.save(groupPlain)
 
-    return group
+    return await this.findOne(group.id)
   }
 
   async findAll() {
@@ -77,10 +79,30 @@ export class GroupService {
   }
 
   async findOne(id: number) {
-    const group = await this.groupRepository.findOne({
-      where: {id}, 
-      relations: {subscribers: true}
-    })
+    const groupRaw = await this.groupRepository
+      .createQueryBuilder("group")
+      .leftJoin("group.subscribers", "subs")
+      .leftJoin("group.images", "images")
+      .leftJoin("group.admin", "admin")
+      .leftJoin("admin.images", "adminImages")
+      .leftJoin("group.categories", "categories")
+      .where("group.id = :id", {id})
+      .select([
+        "group.id", "group.name", "group.description", "group.created_at",
+        "images.id", "images.url", 
+        "adminImages.id", "adminImages.url", "admin.id", "admin.username",
+        "categories.id", "categories.name", "COUNT(subs) as totalSubs"
+      ])
+      .groupBy("group.id")
+      .addGroupBy("admin.id")
+      .addGroupBy("categories.id")
+      .addGroupBy("images.id")
+      .addGroupBy("adminImages.id")
+      .getRawAndEntities()
+    
+    const group = groupRaw.entities[0]
+
+    group.totalSubs = +groupRaw.raw[0].totalsubs
 
     if (!group) {
       throw new NotFoundException("Group not found!")
@@ -105,12 +127,15 @@ export class GroupService {
       group.categories = [...group.categories, ...categories]
     }
 
-    return await this.groupRepository.save(group)
+    await this.groupRepository.save(group)
+
+    return this.findOne(id)
   }
 
   async remove(id: number) {
     await this.findOne(id)
+    await this.groupRepository.delete(id)
 
-    return await this.groupRepository.delete(id)
+    return "Group deleted"
   }
 }

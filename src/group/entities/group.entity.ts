@@ -38,4 +38,6 @@ export class Group {
 
     @UpdateDateColumn()
     updated_at: Date;
+
+    totalSubs: number
 }

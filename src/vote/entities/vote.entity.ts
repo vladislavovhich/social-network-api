@@ -9,7 +9,7 @@ export class Vote {
     @Column()
     value: number
 
-    @ManyToOne(() => User, (user) => user.votes, {eager: true})
+    @ManyToOne(() => User, (user) => user.votes, {eager: true, onDelete: "SET NULL"})
     voter: User
     
     @CreateDateColumn()

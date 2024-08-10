@@ -38,11 +38,9 @@ export class PostService {
       postPlain.images = images
     }
 
-    return await this.postRepository.save(postPlain)
-  }
+    const post = await this.postRepository.save(postPlain)
 
-  async findAll() {
-    return await this.postRepository.find()
+    return await this.findOne(post.id)
   }
 
   async findOne(id: number) {
@@ -50,21 +48,31 @@ export class PostService {
       .leftJoin("post.views", "views")
       .leftJoinAndSelect("post.tags", "tags")
       .leftJoinAndSelect("post.images", "images")
+      .leftJoinAndSelect("post.comments", "comments")
       .leftJoinAndSelect("post.publisher", "publisher")
-      .loadRelationCountAndMap('post.views', 'post.views')
-      .leftJoinAndSelect('post.votes', 'votes')
-      .addSelect('SUM(votes.value)', 'votes')
+      .leftJoinAndSelect("publisher.images", "publisherImages")
+      .leftJoin('post.votes', 'votes')
       .where("post.id = :id", {id})
+      .select([
+        "post.id", "post.text", "post.created_at", "images.id", "images.url",
+        "publisher.id", "publisher.username", "tags.id", "tags.name", 
+        'SUM(votes.value) as totalVotes', 'COUNT(views) as totalViews',
+        'publisherImages.id', 'publisherImages.url', 'COUNT(comments) as totalComments'
+      ])
       .groupBy('post.id')
       .addGroupBy('tags.id')
       .addGroupBy('images.id')
       .addGroupBy('publisher.id')
       .addGroupBy('votes.id')
+      .addGroupBy('views.id')
+      .addGroupBy('publisherImages.id')
       .getRawAndEntities() 
 
     const post = postRaw.entities[0]
 
-    post.rating = +postRaw.raw.reduceRight((prev, cur) => prev + +cur['votes'], 0)
+    post.rating = +postRaw.raw[0].totalvotes || 0
+    post.watched = +postRaw.raw[0].totalviews || 0
+    post.totalComments = +postRaw.raw[0].totalcomments || 0
 
     if (!post) {
       throw new NotFoundException("Post not found!")
@@ -91,19 +99,61 @@ export class PostService {
 
     post.text = text
 
-    return await this.postRepository.save(post)
+    await this.postRepository.save(post)
+
+    return await this.findOne(id)
   }
 
   async remove(id: number) {
     await this.findOne(id)
+    await this.postRepository.delete(id)
 
-    return await this.postRepository.delete(id)
+    return "Post deleted"
   }
 
-  async getGroupPosts(id: number) {
-    await this.groupService.findOne(id)
+  async getGroupPosts(groupId: number) {
+    await this.groupService.findOne(groupId)
+
+    const postRaw = await this.postRepository.createQueryBuilder("post")
+      .leftJoinAndSelect("post.tags", "tags")
+      .leftJoinAndSelect("post.images", "postImages")
+      .leftJoinAndSelect("post.publisher", "publisher")
+      .leftJoin("post.comments", "comments")
+      .leftJoinAndSelect("publisher.images", "publisherImages")
+      .leftJoin("post.votes", "votes")
+      .leftJoin("post.views", "views")
+      .select([
+        "post.id",
+        "post.text",
+        "postImages.id",
+        "postImages.url",
+        "publisher.username",
+        "publisherImages.id",
+        "publisherImages.url",
+        "SUM(votes.value) AS totalVotes",
+        "COUNT(views) AS totalVotes",
+        "COUNT(comments) AS totalComments"
+      ])
+      .groupBy("post.id")
+      .addGroupBy("postImages.id")
+      .addGroupBy("publisher.id")
+      .addGroupBy("publisher.username")
+      .addGroupBy("publisherImages.id")
+      .getRawAndEntities();
     
-    return await this.postRepository.find({where: {group: {id}}})
+    const posts: Post[] = []
+
+    for (let i = 0; i < postRaw.entities.length; i++) {
+      const post = postRaw.entities[i]
+
+      post.rating = +postRaw.raw[i].totalvotes || 0
+      post.watched = +postRaw.raw[i].totalviews || 0
+      post.totalComments = +postRaw.raw[i].totalcomments || 0
+
+      posts.push(post)
+    }
+
+    return posts
   }
 
   async vote(postId: number, user: User, value: -1 | 1) {
@@ -114,7 +164,15 @@ export class PostService {
       }
     })
 
-    const voteIndex = post.votes.findIndex(v => v.voter.id == user.id)
+    if (!post.votes) {
+      const vote = await this.voteService.create(new VoteOperationDto(user, value))
+
+      post.votes.push(vote)
+
+      return await this.findOne(postId)
+    }
+
+    const voteIndex = post.votes.findIndex(v => v.voter && v.voter.id == user.id)
 
     if (voteIndex == -1) {
       const vote = await this.voteService.create(new VoteOperationDto(user, value))

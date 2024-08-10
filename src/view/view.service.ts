@@ -38,8 +38,6 @@ export class ViewService {
       }
     })
 
-    console.log(view)
-
     if (view) {
       throw new BadRequestException("You've already marked this post as seen")
     }

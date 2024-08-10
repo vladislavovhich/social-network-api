@@ -7,11 +7,11 @@ export class CreateUserDto {
     @IsOptional()
     file?: Express.Multer.File;
     
-    @ApiProperty({example: "user@example.com"})
+    @ApiProperty()
     @IsEmail()
     email: string;
 
-    @ApiProperty({example: "starwars"})
+    @ApiProperty()
     @IsString()
     @IsNotEmpty()
     @IsAlphanumeric()
@@ -19,12 +19,12 @@ export class CreateUserDto {
     @MaxLength(25)
     password: string;
 
-    @ApiProperty({example: "usrname123"})
+    @ApiProperty()
     @IsString()
     @IsNotEmpty()
     username: string;
 
-    @ApiProperty({example: "1987-05-04"})
+    @ApiProperty()
     @IsDate()
     @IsNotEmpty()
     @Type(() => Date)

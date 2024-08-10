@@ -24,17 +24,17 @@ export class User {
   @Column()
   password: string;
 
-  @ManyToMany(() => Image, {eager: true})
+  @ManyToMany(() => Image, {eager: true, onDelete: "SET NULL"})
   @JoinTable({name: "users_images"})
   images: Image[]
 
-  @OneToMany(() => View, (view) => view.viewer)
+  @OneToMany(() => View, (view) => view.viewer, {onDelete: "SET NULL"})
   views: View[]
 
-  @OneToMany(() => Comment, (comment) => comment.commenter)
+  @OneToMany(() => Comment, (comment) => comment.commenter, {onDelete: "SET NULL"})
   comments: Comment[]
 
-  @OneToMany(() => Vote, (vote) => vote.voter)
+  @OneToMany(() => Vote, (vote) => vote.voter, {onDelete: "SET NULL"})
   votes: Vote[]
 
   @Column({ type: 'date', default: () => "CURRENT_TIMESTAMP"})
@@ -43,17 +43,17 @@ export class User {
   @Exclude()
   @Column({nullable: true})
   token: string;
-
-  @OneToMany(() => Tag, (tag) => tag.owner)
+ 
+  @OneToMany(() => Tag, (tag) => tag.owner, {onDelete: "SET NULL"})
   tags: Tag[]
 
-  @OneToMany(() => Category, (category) => category.owner)
+  @OneToMany(() => Category, (category) => category.owner, {onDelete: "SET NULL"})
   categories: Category[]
 
-  @OneToMany(() => Post, (post) => post.publisher)
+  @OneToMany(() => Post, (post) => post.publisher, {onDelete: "SET NULL"})
   posts: Post[]
 
-  @ManyToMany(() => Group, (group) => group.subscribers)
+  @ManyToMany(() => Group, (group) => group.subscribers, {onDelete: "SET NULL"})
   groups: Group[]
 
   @OneToMany(() => Group, (group) => group.admin)

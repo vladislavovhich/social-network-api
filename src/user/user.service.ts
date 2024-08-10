@@ -17,6 +17,22 @@ export class UserService {
     this.userRepository = this.dataSource.getRepository(User)
   }
 
+  async findOneProfile(userId: number) {
+    await this.findOne(userId)
+
+    const user = await this.userRepository.createQueryBuilder("user")
+      .leftJoinAndSelect("user.groups", "groups")
+      .leftJoinAndSelect("user.images", "images")
+      .where("user.id = :id", { id: userId })
+      .select([
+        'user.id', 'user.username', 'user.email', 'user.birthDate', 'user.created_at', 
+        'groups.id', 'groups.name', 'images.id', 'images.url'
+      ])
+      .getOne()
+
+    return user
+  }
+
   async create(createUserDto: CreateUserDto) {
     const userPlain = this.userRepository.create(createUserDto)
     const images: Image[] = []
@@ -85,9 +101,9 @@ export class UserService {
 
     userMerged.images = images
 
-    const userUpdated = await this.userRepository.save(userMerged)
+    await this.userRepository.save(userMerged)
  
-    return userUpdated
+    return await this.findOneProfile(id)
   }
 
   async remove(id: number) {

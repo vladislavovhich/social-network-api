@@ -78,7 +78,7 @@ export class CommentService {
       }
     })
 
-    const voteIndex = post.votes.findIndex(v => v.voter.id == user.id)
+    const voteIndex = post.votes.findIndex(v => v.voter && v.voter.id == user.id)
 
     if (voteIndex == -1) {
       const vote = await this.voteService.create(new VoteOperationDto(user, value))

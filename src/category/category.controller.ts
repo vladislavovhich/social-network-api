@@ -7,9 +7,9 @@ import { GetUser } from 'src/common/decorators/extract-user.decorator';
 import { User } from 'src/user/entities/user.entity';
 import { CheckOwnership } from 'src/common/decorators/check-ownership.decorator';
 import { OwnershipGuard } from 'src/common/guards/check-ownership.guard';
-import { ApiTags } from '@nestjs/swagger';
+import { ApiExcludeController, ApiTags } from '@nestjs/swagger';
 
-@ApiTags('Category')
+@ApiExcludeController()
 @Controller('categories')
 export class CategoryController {
   constructor(private readonly categoryService: CategoryService) {}

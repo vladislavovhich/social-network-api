@@ -1,8 +1,8 @@
-import { Controller, Get, Post, Body, Put, Patch, Param, Delete, UseGuards, UseInterceptors, UploadedFile, UploadedFiles } from '@nestjs/common';
+import { Controller, Get, Post, Body, Put, Patch, Param, Delete, UseGuards, UseInterceptors, UploadedFile, UploadedFiles, forwardRef, Inject } from '@nestjs/common';
 import { PostService } from './post.service';
 import { CreatePostDto } from './dto/create-post.dto';
 import { UpdatePostDto } from './dto/update-post.dto';
-import { ApiConsumes, ApiTags } from '@nestjs/swagger';
+import { ApiBadRequestResponse, ApiConsumes, ApiNotFoundResponse, ApiOkResponse, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { FileInterceptor, FilesInterceptor } from '@nestjs/platform-express';
 import { AccessTokenGuard } from 'src/auth/guards/access-token.guard';
 import { multerOptions } from 'src/config/multer.config';
@@ -11,13 +11,24 @@ import { GetUser } from 'src/common/decorators/extract-user.decorator';
 import { CheckOwnership } from 'src/common/decorators/check-ownership.decorator';
 import { OwnershipGuard } from 'src/common/guards/check-ownership.guard';
 import { SubscriberGuard } from './guards/is-subscriber.guard';
+import { ViewService } from 'src/view/view.service';
+import { CreateViewDto } from 'src/view/dto/create-view.dto';
+import { GetPostDto } from './dto/get-post.dto';
 
 @ApiTags("Post")
 @Controller('/')
 export class PostController {
-  constructor(private readonly postService: PostService) {}
+  constructor(
+    private readonly postService: PostService,
+    @Inject(forwardRef(() => ViewService))
+    private readonly viewService: ViewService
+  ) {}
 
   @Post('/groups/:id/posts')
+  @ApiOkResponse({type: GetPostDto, description: "Created post"})
+  @ApiNotFoundResponse({description: "Group not found"})
+  @ApiBadRequestResponse({description: "Incorrect input data"})
+  @ApiResponse({status: 401, description: "Not authorized"})
   @ApiConsumes("multipart/form-data")
   @UseGuards(SubscriberGuard)
   @UseGuards(AccessTokenGuard)
@@ -31,33 +42,52 @@ export class PostController {
   }
 
   @Get('/groups/:id/posts')
+  @ApiOkResponse({type: [GetPostDto]})
+  @ApiNotFoundResponse({description: "Group not found"})
   getGroupPosts(@Param('id') id: string) {
     return this.postService.getGroupPosts(+id)
   }
 
-  @Get('/posts')
-  findAll() {
-    return this.postService.findAll();
-  }
-
   @Get('/posts/:id')
+  @ApiOkResponse({type: GetPostDto, description: "Post"})
+  @ApiNotFoundResponse({description: "Post not found"})
   findOne(@Param('id') id: string) {
     return this.postService.findOne(+id);
   }
 
   @Put('/posts/:id/upvote')
+  @ApiOkResponse({type: GetPostDto, description: "Upvoted Post"})
+  @ApiNotFoundResponse({description: "Post not found"})
+  @ApiResponse({status: 401, description: "Not authorized"})
   @UseGuards(AccessTokenGuard)
   upvotePost(@Param('id') id: string, @GetUser() user: User) {
     return this.postService.vote(+id, user, 1);
   }
 
   @Put('/posts/:id/downvote')
+  @ApiOkResponse({type: GetPostDto, description: "Downvoted Post"})
+  @ApiNotFoundResponse({description: "Post not found"})
+  @ApiResponse({status: 401, description: "Not authorized"})
   @UseGuards(AccessTokenGuard)
   donwvotePost(@Param('id') id: string, @GetUser() user: User) {
     return this.postService.vote(+id, user, -1);
   }
 
+  @Post('/posts/:id/view')
+  @ApiOkResponse({type: GetPostDto, description: "Viewed Post"})
+  @ApiNotFoundResponse({description: "Post not found"})
+  @ApiResponse({status: 401, description: "Not authorized"})
+  @UseGuards(AccessTokenGuard)
+  markPostAsViewed(@Param('id') id: string, @GetUser() user: User) {
+    return this.viewService.markPostAsViewed(new CreateViewDto(user.id, +id));
+  }
+
   @Patch('/posts/:id')
+  @ApiOkResponse({type: GetPostDto, description: "Updated Post"})
+  @ApiNotFoundResponse({description: "Post not found"})
+  @ApiResponse({status: 403, description: "Access denied (Resource does not belong to the user)"})
+  @ApiBadRequestResponse({description: "Incorrect input data"})
+  @ApiResponse({status: 401, description: "Not authorized"})
   @ApiConsumes("multipart/form-data")
   @CheckOwnership('Post', 'publisher')
   @UseGuards(OwnershipGuard)
@@ -71,6 +101,10 @@ export class PostController {
   }
 
   @Delete('/posts/:id')
+  @ApiOkResponse({description: "Post deleted"})
+  @ApiNotFoundResponse({description: "Post not found"})
+  @ApiResponse({status: 401, description: "Not authorized"})
+  @ApiResponse({status: 403, description: "Access denied (Resource does not belong to the user)"})
   @CheckOwnership('Post', 'publisher')
   @UseGuards(OwnershipGuard)
   @UseGuards(AccessTokenGuard)

@@ -33,7 +33,9 @@ export class AuthService {
     await this.updateToken(user.id, tokens.refreshToken)
     await this.sendConfirmationEmail(user)
 
-    return {user, tokens}
+    const profile = await this.userService.findOneProfile(user.id)
+
+    return {user: profile, tokens}
   }
 
   async sendConfirmationEmail(user: User) {
@@ -83,7 +85,9 @@ export class AuthService {
 
       await this.updateToken(user.id, tokens.refreshToken)
 
-      return {user, tokens}
+      const profile = await this.userService.findOneProfile(user.id)
+
+      return {tokens, user: profile}
   }
 
   async refreshToken(userId: number, refreshToken: string) {
