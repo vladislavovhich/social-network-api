@@ -5,6 +5,7 @@ import { Image } from "src/image/entities/image.entity";
 import { View } from "src/view/entities/view.entity";
 import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, JoinTable, ManyToMany, ManyToOne, OneToMany } from "typeorm";
 import { Vote } from "src/vote/entities/vote.entity";
+import { Comment } from "src/comment/entities/comment.entity";
 
 @Entity('posts')
 export class Post {
@@ -20,6 +21,9 @@ export class Post {
 
     @OneToMany(() => View, (view) => view.post)
     views: View[]
+
+    @OneToMany(() => Comment, (comment) => comment.post)
+    comments: Comment[]
 
     @ManyToMany(() => Tag, (tag) => tag.posts)
     @JoinTable({name: "posts_tags"})

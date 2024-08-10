@@ -1,5 +1,6 @@
 import { Exclude } from 'class-transformer';
 import { Category } from 'src/category/entities/category.entity';
+import { Comment } from 'src/comment/entities/comment.entity';
 import { Group } from 'src/group/entities/group.entity';
 import { Image } from 'src/image/entities/image.entity';
 import { Post } from 'src/post/entities/post.entity';
@@ -29,6 +30,9 @@ export class User {
 
   @OneToMany(() => View, (view) => view.viewer)
   views: View[]
+
+  @OneToMany(() => Comment, (comment) => comment.commenter)
+  comments: Comment[]
 
   @OneToMany(() => Vote, (vote) => vote.voter)
   votes: Vote[]

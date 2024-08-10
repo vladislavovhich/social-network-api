@@ -64,8 +64,6 @@ export class PostService {
 
     const post = postRaw.entities[0]
 
-    console.log(postRaw)
-
     post.rating = +postRaw.raw.reduceRight((prev, cur) => prev + +cur['votes'], 0)
 
     if (!post) {
@@ -128,7 +126,6 @@ export class PostService {
       post.votes[voteIndex] = vote
     }
 
-    console.log(value, voteIndex)
     await this.postRepository.save(post)
 
     return await this.findOne(postId)

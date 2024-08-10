@@ -16,6 +16,7 @@ import { PostModule } from './post/post.module';
 import { GroupModule } from './group/group.module';
 import { ViewModule } from './view/view.module';
 import { VoteModule } from './vote/vote.module';
+import { CommentModule } from './comment/comment.module';
 
 @Module({
   imports: [
@@ -56,7 +57,7 @@ import { VoteModule } from './vote/vote.module';
     CategoryModule, 
     PostModule, 
     GroupModule, 
-    ViewModule, VoteModule],
+    ViewModule, VoteModule, CommentModule],
   controllers: [],
   providers: [],
 })
