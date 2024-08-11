@@ -1,7 +1,6 @@
 import { ApiProperty } from "@nestjs/swagger"
 import { Transform } from "class-transformer";
 import { ArrayMinSize, IsArray, IsNotEmpty, IsOptional, IsString } from "class-validator"
-import { User } from "src/user/entities/user.entity"
 
 export class CreatePostDto {
     @ApiProperty({ type: 'string', format: 'binary', required: false, isArray: true })
@@ -21,6 +20,5 @@ export class CreatePostDto {
     tags: string[]
 
     groupId: number
-    
-    publisher: User
+    publisherId: number
 }

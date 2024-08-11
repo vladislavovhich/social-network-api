@@ -1,0 +1,16 @@
+model Group {
+    id          Int      @id @default(autoincrement())
+    name        String
+    description String
+
+    admin User @relation(fields: [adminId], references: [id])
+    adminId Int
+
+    posts Post[]
+    subs GroupSub[]
+    categories GroupCategory[]
+    images GroupImage[]
+
+    createdAt   DateTime @default(now())
+    updatedAt   DateTime @updatedAt
+}

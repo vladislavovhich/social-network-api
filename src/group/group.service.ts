@@ -1,141 +1,114 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { CreateGroupDto } from './dto/create-group.dto';
 import { UpdateGroupDto } from './dto/update-group.dto';
-import { DataSource, Repository } from 'typeorm';
-import { Group } from './entities/group.entity';
-import { ImageService } from 'src/image/image.service';
+import { PrismaService } from 'src/prisma/prisma.service';
 import { CategoryService } from 'src/category/category.service';
-import { Image } from 'src/image/entities/image.entity';
-import { User } from 'src/user/entities/user.entity';
+import { Group, User, Image } from '@prisma/client';
+import { ImageService } from 'src/image/image.service';
 
 @Injectable()
 export class GroupService {
-  private readonly groupRepository: Repository<Group>
-
   constructor(
-    private dataSource: DataSource,
-    private readonly imageService: ImageService,
-    private readonly categoryService: CategoryService
-  ) {
-    this.groupRepository = this.dataSource.getRepository(Group)
+    private readonly prisma: PrismaService,
+    private readonly categoryService: CategoryService,
+    private readonly imageService: ImageService
+  ) {}
+
+  async isSubscribed(groupId: number, userId: number) {
+    return await this.prisma.groupSub.findFirst({
+      where: {userId, groupId}
+    })
   }
 
-  isSubscribed(group: Group, user: User) {
-    return group.subscribers.some(subs => subs && subs.id == user.id)
-  }
+  async subscribe(groupId: number, userId: number) {
+    const isSub = await this.isSubscribed(groupId, userId)
 
-  async subscribe(groupId: number, user: User) {
-    const group = await this.findOne(groupId)
-
-    if (this.isSubscribed(group, user)) {
-      throw new BadRequestException("You're already subscribed to group!")
+    if (isSub) {
+      throw new BadRequestException("You're already a sub of the groud")
     }
 
-    group.subscribers.push(user)
-
-    await this.groupRepository.save(group)
-
-    return "Subscribed to group"
+    await this.prisma.groupSub.create({
+      data: {
+        user: {connect: {id: userId}},
+        group: {connect: {id: groupId}}
+      }
+    })
   }
 
-  async unsubscribe(groupId: number, user: User) {
-    const group = await this.findOne(groupId)
+  async unsubscribe(groupId: number, userId: number) {
+    const isSub = await this.isSubscribed(groupId, userId)
 
-    if (!this.isSubscribed(group, user)) {
-      throw new BadRequestException("You're not subscribed to group!")
+    if (!isSub) {
+      throw new BadRequestException("You're not a sub of the groud")
     }
 
-    group.subscribers = group.subscribers.filter(sub => sub.id != user.id)
-
-    return "Unsubscribed to group"
+    await this.prisma.groupSub.delete({
+      where: {
+        userId_groupId: {
+          groupId, userId
+        }
+      }
+    })
   }
 
   async create(createGroupDto: CreateGroupDto) {
-    const categories = await this.categoryService.handleCategories(createGroupDto.categories, createGroupDto.admin)
+    const {adminId, name, description, file, categories: categoryNames} = createGroupDto
 
-    const groupPlain = this.groupRepository.create({
-      name: createGroupDto.name,
-      description: createGroupDto.description,
-      admin: createGroupDto.admin,
-      categories
-    })
+    const categories = await this.categoryService.handleCategories(categoryNames, adminId)
     const images: Image[] = []
 
-    if (createGroupDto.file) {
-      const image = await this.imageService.uploadImage(createGroupDto.file)
+    if (file) {
+      const image = await this.imageService.uploadImage(file)
 
       images.push(image)
     }
 
-    groupPlain.images = images
-
-    const group = await this.groupRepository.save(groupPlain)
-
-    return await this.findOne(group.id)
+    return await this.prisma.group.create({
+      data: {
+        name,
+        description,
+        admin: {connect: {id: adminId}},
+        categories: {
+          create: categories.map(cat => ({category: {connect: {id: cat.id}}}))
+        }
+      }
+    })
   }
 
   async findAll() {
-    return this.groupRepository.find()
+    return this.prisma.group.findMany()
   }
 
   async findOne(id: number) {
-    const groupRaw = await this.groupRepository
-      .createQueryBuilder("group")
-      .leftJoin("group.subscribers", "subs")
-      .leftJoin("group.images", "images")
-      .leftJoin("group.admin", "admin")
-      .leftJoin("admin.images", "adminImages")
-      .leftJoin("group.categories", "categories")
-      .where("group.id = :id", {id})
-      .select([
-        "group.id", "group.name", "group.description", "group.created_at",
-        "images.id", "images.url", 
-        "adminImages.id", "adminImages.url", "admin.id", "admin.username",
-        "categories.id", "categories.name", "COUNT(subs) as totalSubs"
-      ])
-      .groupBy("group.id")
-      .addGroupBy("admin.id")
-      .addGroupBy("categories.id")
-      .addGroupBy("images.id")
-      .addGroupBy("adminImages.id")
-      .getRawAndEntities()
-    
-    const group = groupRaw.entities[0]
-
-    group.totalSubs = +groupRaw.raw[0].totalsubs
-
-    if (!group) {
-      throw new NotFoundException("Group not found!")
-    }
-
-    return group
+    return await this.prisma.group.findFirstOrThrow({where: {id}})
   }
 
 
   async update(id: number, updateGroupDto: UpdateGroupDto) {
-    const group = await this.findOne(id)
-    
-    if (updateGroupDto.file) {
-      const image = await this.imageService.uploadImage(updateGroupDto.file)
+    const {adminId, name, description, file, categories: categoryNames} = updateGroupDto
 
-      group.images.push(image)
+    const categories = await this.categoryService.handleCategories(categoryNames, adminId)
+    const images: Image[] = []
+
+    if (file) {
+      const image = await this.imageService.uploadImage(file)
+
+      images.push(image)
     }
 
-    if (updateGroupDto.categories) {
-      const categories = await this.categoryService.handleCategories(updateGroupDto.categories, group.admin)
-
-      group.categories = [...group.categories, ...categories]
-    }
-
-    await this.groupRepository.save(group)
-
-    return this.findOne(id)
+    return await this.prisma.group.update({
+      where: {id},
+      data: {
+        name,
+        description,
+        categories: {
+          create: categories.map(cat => ({category: {connect: {id: cat.id}}}))
+        }
+      }
+    })
   }
 
   async remove(id: number) {
-    await this.findOne(id)
-    await this.groupRepository.delete(id)
-
-    return "Group deleted"
+    return await this.prisma.group.delete({where: {id}})
   }
 }

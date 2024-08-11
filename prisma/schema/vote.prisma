@@ -1,0 +1,13 @@
+model Vote {
+    id          Int      @id @default(autoincrement())
+    value   Int
+
+    voter   User @relation(fields: [voterId], references: [id])
+    voterId Int
+
+    posts PostVote[]
+    comments CommentVote[]
+
+    createdAt   DateTime @default(now())
+    updatedAt   DateTime @updatedAt
+}

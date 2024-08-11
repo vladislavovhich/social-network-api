@@ -1,0 +1,12 @@
+model View {
+    id          Int      @id @default(autoincrement())
+
+    viewer   User @relation(fields: [viewerId], references: [id])
+    viewerId Int
+
+    post        Post @relation(fields: [postId], references: [id])
+    postId      Int   
+
+    createdAt   DateTime @default(now())
+    updatedAt   DateTime @updatedAt
+}

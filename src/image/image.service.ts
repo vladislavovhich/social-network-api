@@ -1,26 +1,21 @@
 import { Injectable } from '@nestjs/common';
 import { CloudinaryService } from 'src/cloudinary/cloudinary.service';
-import { DataSource, Repository } from 'typeorm';
-import { Image } from './entities/image.entity';
-import { User } from 'src/user/entities/user.entity';
-import { EntityType, Models, resType } from './image.types';
+import { Image } from '@prisma/client';
+import { PrismaService } from 'src/prisma/prisma.service';
 
 @Injectable()
 export class ImageService {
-    private readonly imageRepository: Repository<Image>
-
     constructor(
         private readonly cloudinary: CloudinaryService,
-        private dataSource: DataSource
-    ) {
-        this.imageRepository = this.dataSource.getRepository(Image)
-    }
+        private readonly prisma: PrismaService,
+    ) {}
 
     async uploadImage(file: Express.Multer.File) {
         const {url} = await this.cloudinary.uploadImage(file)
 
-        const imagePlain = this.imageRepository.create({url})
-        const image = await this.imageRepository.save(imagePlain)
+        const image = await this.prisma.image.create({
+            data: {url}
+        })
 
         return image
     }

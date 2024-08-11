@@ -1,11 +1,9 @@
-import { User } from "src/user/entities/user.entity";
-
 export class VoteOperationDto {
-    voter: User
+    voterId: number
     value: -1 | 1
 
-    constructor(voter: User, value: -1 | 1) {
-        this.voter = voter
+    constructor(voter: number, value: -1 | 1) {
+        this.voterId = voter
         this.value = value
     }
 }

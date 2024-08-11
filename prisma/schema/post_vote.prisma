@@ -1,0 +1,11 @@
+model PostVote {
+    id          Int      @id @default(autoincrement())
+
+    vote   Vote @relation(fields: [voteId], references: [id])
+    voteId Int
+
+    post   Post @relation(fields: [postId], references: [id])
+    postId Int
+
+    @@unique([voteId, postId])
+}

@@ -4,7 +4,7 @@ import { ExtractJwt, Strategy } from 'passport-jwt';
 import { extractTokenFromCookies } from 'src/common/helpers/extract-jwt.helper';
 import { UserService } from 'src/user/user.service';
 import { JwtPayload } from '../auth.types';
-import { User } from 'src/user/entities/user.entity';
+import { User } from '@prisma/client';
 import { ConfigService } from '@nestjs/config';
 import { JwtConfig } from 'src/config/configuration.types';
 

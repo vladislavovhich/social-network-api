@@ -1,0 +1,11 @@
+model CommentVote {
+    id          Int      @id @default(autoincrement())
+
+    vote   Vote @relation(fields: [voteId], references: [id])
+    voteId Int
+
+    comment Comment @relation(fields: [commentId], references: [id])
+    commentId Int
+
+    @@unique([voteId, commentId])
+}

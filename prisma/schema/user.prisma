@@ -1,0 +1,22 @@
+model User {
+    id          Int      @id @default(autoincrement())
+    email       String
+    username    String
+    password    String 
+    token       String? @default("")
+    isVerified  Boolean @default(false)
+    birthDate   DateTime
+
+    groups GroupSub[]
+    images UserImage[]
+    viewedPosts View[]
+    comments       Comment[]
+    adminGroups    Group[]
+    allPosts       Post[]
+    allVotes       Vote[]
+    tags           Tag[]
+    categories     Category[]
+
+    createdAt   DateTime @default(now())
+    updatedAt   DateTime @updatedAt
+}

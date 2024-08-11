@@ -1,0 +1,19 @@
+model Post {
+    id          Int      @id @default(autoincrement())
+    text        String
+
+    publisher   User @relation(fields: [publisherId], references: [id])
+    publisherId Int
+
+    group   Group @relation(fields: [groupId], references: [id])
+    groupId Int
+
+    views View[]
+    comments Comment[]
+    votes PostVote[]
+    tags PostTag[]
+    images PostImage[]
+
+    createdAt   DateTime @default(now())
+    updatedAt   DateTime @updatedAt
+}

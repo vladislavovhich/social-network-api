@@ -1,0 +1,11 @@
+model Image {
+    id          Int      @id @default(autoincrement())
+    url         String
+
+    users UserImage[]
+    posts PostImage[]
+    groups GroupImage[]
+    
+    createdAt   DateTime @default(now())
+    updatedAt   DateTime @updatedAt
+}

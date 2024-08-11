@@ -7,8 +7,9 @@ import * as bcrypt from "bcrypt"
 import { ConfigService } from '@nestjs/config';
 import { JwtConfig } from 'src/config/configuration.types';
 import { MailService } from 'src/mail/mail.service';
-import { User } from 'src/user/entities/user.entity';
+import { User } from '@prisma/client';
 import { JwtEmail } from './auth.types';
+import { PrismaService } from 'src/prisma/prisma.service';
 
 @Injectable()
 export class AuthService {
@@ -16,7 +17,8 @@ export class AuthService {
       private readonly jwtService: JwtService,
       private readonly userService: UserService,
       private readonly configService: ConfigService,
-      private readonly mailService: MailService
+      private readonly mailService: MailService,
+      private readonly prisma: PrismaService
   ) {}
   
   async signUp(createUserDto: CreateUserDto) {
@@ -40,9 +42,9 @@ export class AuthService {
 
   async sendConfirmationEmail(user: User) {
     if (user.isVerified) {
-        throw new BadRequestException("You've already confirmed your email!")
+        throw new BadRequestException("User is verified!")
     }
-    
+
     const token = this.createToken({email: user.email}, 'confirm')
 
     await this.mailService.sendConfirmation(user, token)

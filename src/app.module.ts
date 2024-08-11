@@ -1,6 +1,5 @@
 import { Module } from '@nestjs/common';
 import { UserModule } from './user/user.module';
-import { TypeormModule } from './typeorm/typeorm.module';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { AuthModule } from './auth/auth.module';
 import configuration from './config/configuration';
@@ -17,6 +16,9 @@ import { GroupModule } from './group/group.module';
 import { ViewModule } from './view/view.module';
 import { VoteModule } from './vote/vote.module';
 import { CommentModule } from './comment/comment.module';
+import { PrismaModule } from './prisma/prisma.module';
+import { APP_FILTER } from '@nestjs/core';
+import { PrismaErrorFilter } from './common/filters/prisma-error.filter';
 
 @Module({
   imports: [
@@ -47,7 +49,6 @@ import { CommentModule } from './comment/comment.module';
         }
       }
     }),
-    TypeormModule, 
     UserModule, 
     AuthModule, 
     MailModule, 
@@ -57,8 +58,13 @@ import { CommentModule } from './comment/comment.module';
     CategoryModule, 
     PostModule, 
     GroupModule, 
-    ViewModule, VoteModule, CommentModule],
+    ViewModule, VoteModule, CommentModule, PrismaModule],
   controllers: [],
-  providers: [],
+  providers: [
+    {
+      provide: APP_FILTER,
+      useClass: PrismaErrorFilter,
+    }
+  ],
 })
 export class AppModule {}

@@ -3,7 +3,6 @@ import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { join } from 'path';
 import { CommonConfig } from 'src/config/configuration.types';
-import { User } from 'src/user/entities/user.entity';
 
 @Injectable()
 export class MailService {
@@ -16,7 +15,7 @@ export class MailService {
         this.hostName = this.configService.get<CommonConfig>('common').host
     }
 
-    async sendConfirmation(user: User, token: string) {
+    async sendConfirmation(user, token: string) {
         const url = `${this.hostName}/auth/confirm?token=${token}`
 
         await this.mailer.sendMail({

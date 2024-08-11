@@ -9,6 +9,7 @@ import { UserModule } from 'src/user/user.module';
 import { AccessTokenStrategy } from './strategies/access-token.strategy';
 import { RefreshTokenStrategy } from './strategies/refresh-token.strategy';
 import { MailModule } from 'src/mail/mail.module';
+import { PrismaModule } from 'src/prisma/prisma.module';
 
 @Module({
   imports: [
@@ -27,7 +28,8 @@ import { MailModule } from 'src/mail/mail.module';
       }
     }),
     UserModule,
-    MailModule
+    MailModule,
+    PrismaModule
   ],
   controllers: [AuthController],
   providers: [AuthService, AccessTokenStrategy, RefreshTokenStrategy],

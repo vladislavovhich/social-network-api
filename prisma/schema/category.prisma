@@ -1,0 +1,12 @@
+model Category {
+    id          Int      @id @default(autoincrement())
+    name        String
+
+    owner      User?    @relation(fields: [ownerId], references: [id])
+    ownerId    Int?
+
+    groups GroupCategory[]
+
+    createdAt   DateTime @default(now())
+    updatedAt   DateTime @updatedAt
+}

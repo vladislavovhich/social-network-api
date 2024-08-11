@@ -1,7 +1,6 @@
 import { ApiProperty } from "@nestjs/swagger"
 import { Transform, Type } from "class-transformer";
 import { ArrayMinSize, IsArray, IsNotEmpty, IsOptional, IsString, ValidateNested } from "class-validator"
-import { User } from "src/user/entities/user.entity"
 
 export class CreateGroupDto {
     @ApiProperty({ type: 'string', format: 'binary', required: false })
@@ -25,5 +24,5 @@ export class CreateGroupDto {
     @ArrayMinSize(1)
     categories: string[]
 
-    admin: User
+    adminId: number
 }

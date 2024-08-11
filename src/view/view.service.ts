@@ -1,45 +1,37 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
-import { CreateViewDto } from './dto/create-view.dto';
-import { DataSource, Repository } from 'typeorm';
-import { View } from './entities/view.entity';
-import { UserService } from 'src/user/user.service';
-import { PostService } from 'src/post/post.service';
-import { Post } from 'src/post/entities/post.entity';
-import { User } from 'src/user/entities/user.entity';
+import { ViewOperationDto } from './dto/view-operation.dto';
+import { PrismaService } from 'src/prisma/prisma.service';
 
 @Injectable()
 export class ViewService {
-  private readonly viewRepository: Repository<View>
-
   constructor(
-    private dataSource: DataSource,
-    private readonly userService: UserService,
-    private readonly postService: PostService
-  ) {
-    this.viewRepository = this.dataSource.getRepository(View)
+    private readonly prisma: PrismaService
+  ) {}
+
+  async markPostAsViewed(viewDto: ViewOperationDto) {
+    const {userId, postId} = viewDto
+
+    await this.isViewed(viewDto)
+    
+    return await this.prisma.view.create({
+      data: {
+        viewer: {connect: {id: userId}},
+        post: {connect: {id: postId}}
+      }
+    })
   }
 
-  async markPostAsViewed(createViewDto: CreateViewDto) {
-    const user = await this.userService.findOne(createViewDto.userId)
-    const post = await this.postService.findOne(createViewDto.postId)
-
-    await this.isViewed(post, user)
-
-    const viewPlain = this.viewRepository.create({viewer: user, post})
-
-    return await this.viewRepository.save(viewPlain)
-  }
-
-  async isViewed(post: Post, user: User) {
-    const view = await this.viewRepository.findOne({
+  async isViewed(viewDto: ViewOperationDto) {
+    const {userId: viewerId, postId} = viewDto
+    
+    const view = await this.prisma.view.findFirst({
       where: {
-        viewer: {id: user.id},
-        post: {id: post.id}
+        viewerId, postId
       }
     })
 
     if (view) {
-      throw new BadRequestException("You've already marked this post as seen")
+      throw new BadRequestException("This post is already marked as viewed")
     }
   }
 }

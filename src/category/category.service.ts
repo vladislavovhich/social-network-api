@@ -1,29 +1,23 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { CreateCategoryDto } from './dto/create-category.dto';
 import { UpdateCategoryDto } from './dto/update-category.dto';
-import { Category } from './entities/category.entity';
-import { UpdateTagDto } from 'src/tag/dto/update-tag.dto';
-import { User } from 'src/user/entities/user.entity';
-import { Repository, DataSource } from 'typeorm';
+import { PrismaService } from 'src/prisma/prisma.service';
+import { Category } from '@prisma/client';
 
 @Injectable()
 export class CategoryService {
-  private readonly categoryRepository: Repository<Category>
-  
   constructor(
-    private dataSource: DataSource
-  ) {
-    this.categoryRepository = this.dataSource.getRepository(Category)
-  }
+    private readonly prisma: PrismaService
+  ) {}
 
-  async handleCategories(categoryNames: string[], user: User) {
+  async handleCategories(categoryNames: string[], userId: number) {
     const categories: Category[] = []
 
     for (let categoryName of categoryNames) {
       let category = await this.findByName(categoryName)
 
       if (!category) {
-        category = await this.create({name: categoryName, user})
+        category = await this.create({name: categoryName, userId})
       }
 
       categories.push(category)
@@ -33,45 +27,38 @@ export class CategoryService {
   }
 
   async create(createCategoryDto: CreateCategoryDto) {
-    const tag = this.categoryRepository.create({
-      ...createCategoryDto,
-      owner: createCategoryDto.user
-    })
+    const {name, userId} = createCategoryDto
 
-    return await this.categoryRepository.save(tag)
+    return await this.prisma.category.create({
+      data: {
+        name,
+        owner: { connect: {id: userId}}
+      }
+    })
   }
 
   async findAll() {
-    return await this.categoryRepository.find()
+    return await this.prisma.category.findMany()
   }
 
   async findByName(name: string) {
-    const category = await this.categoryRepository.findOne({where: {name}})
-
-    return category
+    return await this.prisma.category.findFirst({where: {name}})
   }
 
   async findOne(id: number) {
-    const category = await this.categoryRepository.findOne({where: {id}})
-
-    if (!category) {
-      throw new BadRequestException("Category not found!")
-    }
-
-    return category
+    return await this.prisma.category.findFirstOrThrow({where: {id}})
   }
 
   async update(id: number, updateCategoryDto: UpdateCategoryDto) {
-    const category = await this.findOne(id)
-    const categoryMerged = this.categoryRepository.merge(category, updateCategoryDto)
-    const categoryUpdated = await this.categoryRepository.save(categoryMerged)
-
-    return categoryUpdated
+    return await this.prisma.category.update({
+      where: {id},
+      data: {
+        name: updateCategoryDto.name
+      }
+    })
   }
 
   async remove(id: number) {
-    await this.findOne(id)
-
-    return await this.categoryRepository.delete(id);
+    return await this.prisma.category.delete({where: {id}})
   }
 }

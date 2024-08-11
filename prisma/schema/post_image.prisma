@@ -1,0 +1,11 @@
+model PostImage {
+    id          Int      @id @default(autoincrement())
+
+    post        Post @relation(fields: [postId], references: [id])
+    postId      Int
+
+    image       Image @relation(fields: [imageId], references: [id])
+    imageId     Int
+
+    @@unique([postId, imageId])
+}

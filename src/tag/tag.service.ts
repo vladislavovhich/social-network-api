@@ -1,28 +1,27 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { CreateTagDto } from './dto/create-tag.dto';
 import { UpdateTagDto } from './dto/update-tag.dto';
-import { DataSource, Repository } from 'typeorm';
-import { Tag } from './entities/tag.entity';
-import { User } from 'src/user/entities/user.entity';
+import { PrismaService } from 'src/prisma/prisma.service';
+import { Tag } from '@prisma/client';
 
 @Injectable()
 export class TagService {
-  private readonly tagRepository: Repository<Tag>
-  
   constructor(
-    private dataSource: DataSource
-  ) {
-    this.tagRepository = this.dataSource.getRepository(Tag)
-  }
+    private readonly prisma: PrismaService
+  ) {}
 
-  async handleTags(tagNames: string[], user: User) {
+  async handleTags(tagNames: string[], userId: number) {
     const tags: Tag[] = []
+
+    if (!tagNames) {
+      return []
+    }
 
     for (let tagName of tagNames) {
       let tag = await this.findByName(tagName)
 
       if (!tag) {
-        tag = await this.create({name: tagName, user})
+        tag = await this.create({name: tagName, userId})
       }
 
       tags.push(tag)
@@ -32,45 +31,38 @@ export class TagService {
   }
 
   async create(createTagDto: CreateTagDto) {
-    const tag = this.tagRepository.create({
-      ...createTagDto,
-      owner: createTagDto.user
-    })
+    const {name, userId} = createTagDto
 
-    return await this.tagRepository.save(tag)
+    return await this.prisma.tag.create({
+      data: {
+        name,
+        owner: { connect: {id: userId}}
+      }
+    })
   }
 
   async findAll() {
-    return await this.tagRepository.find()
+    return await this.prisma.tag.findMany()
   }
 
   async findByName(name: string) {
-    const tag = await this.tagRepository.findOne({where: {name}})
-
-    return tag
+    return await this.prisma.tag.findFirst({where: {name}})
   }
 
   async findOne(id: number) {
-    const tag = await this.tagRepository.findOne({where: {id}})
-
-    if (!tag) {
-      throw new BadRequestException("Tag not found!")
-    }
-
-    return tag
+    return await this.prisma.tag.findFirstOrThrow({where: {id}})
   }
 
   async update(id: number, updateTagDto: UpdateTagDto) {
-    const tag = await this.findOne(id)
-    const tagMerged = this.tagRepository.merge(tag, updateTagDto)
-    const tagUpdated = await this.tagRepository.save(tagMerged)
-
-    return tagUpdated
+    return await this.prisma.tag.update({
+      where: {id},
+      data: {
+        name: updateTagDto.name
+      }
+    })
   }
 
   async remove(id: number) {
-    await this.findOne(id)
-
-    return await this.tagRepository.delete(id);
+    return await this.prisma.tag.delete({where: {id}})
   }
 }

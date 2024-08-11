@@ -1,0 +1,12 @@
+model Tag {
+    id          Int      @id @default(autoincrement())
+    name        String
+
+    owner      User?    @relation(fields: [ownerId], references: [id])
+    ownerId    Int?
+
+    tagPosts PostTag[]
+
+    createdAt   DateTime @default(now())
+    updatedAt   DateTime @updatedAt
+}

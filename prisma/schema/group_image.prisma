@@ -1,0 +1,11 @@
+model GroupImage {
+    id          Int      @id @default(autoincrement())
+
+    group       Group @relation(fields: [groupId], references: [id])
+    groupId     Int
+
+    image       Image @relation(fields: [imageId], references: [id])
+    imageId     Int
+
+    @@unique([groupId, imageId])
+}

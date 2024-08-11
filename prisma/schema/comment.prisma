@@ -1,0 +1,16 @@
+model Comment {
+    id          Int      @id @default(autoincrement())
+    text        String
+    depth       Int      @default(0)
+
+    commenter   User @relation(fields: [commenterId], references: [id])
+    commenterId Int
+
+    votes CommentVote[]
+    
+    post        Post @relation(fields: [postId], references: [id])
+    postId      Int       
+
+    createdAt   DateTime @default(now())
+    updatedAt   DateTime @updatedAt
+}

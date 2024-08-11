@@ -6,12 +6,12 @@ import { CreateUserDto } from 'src/user/dto/create-user.dto';
 import { AccessTokenGuard } from './guards/access-token.guard';
 import { RefreshTokenGuard } from './guards/refresh-token.guard';
 import { Request, Response} from "express"
-import { User } from 'src/user/entities/user.entity';
 import { ApiConsumes, ApiExcludeEndpoint, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { CheckVerified } from 'src/common/decorators/check-verified.decorator';
 import { multerOptions } from 'src/config/multer.config';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { UserProfileDto } from 'src/user/dto/user-profile.dto';
+import { User } from '@prisma/client';
 
 @ApiTags("Auth")
 @Controller('auth')
@@ -36,7 +36,7 @@ export class AuthController {
     }
 
     @Post('sign-in')
-    @ApiResponse({ status: 200, type: UserProfileDto, description: "User profile" })
+    @ApiResponse({ status: 201, type: UserProfileDto, description: "User profile" })
     @ApiResponse({ status: 400, description: "Incorrect login or password" })
     async signIn(@Body() loginDto: LoginDto, @Res({ passthrough: true }) response: Response) { 
         const result = await this.authService.signIn(loginDto)
@@ -48,7 +48,7 @@ export class AuthController {
     }
 
     @Post('sign-up') 
-    @ApiResponse({ status: 200, type: UserProfileDto, description: "User profile" })
+    @ApiResponse({ status: 201, type: UserProfileDto, description: "User profile" })
     @ApiResponse({ status: 400, description: "Email is already taken | incorrect input data" })
     @ApiConsumes("multipart/form-data")
     @UseInterceptors(FileInterceptor('file', multerOptions))

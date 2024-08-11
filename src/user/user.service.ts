@@ -1,115 +1,97 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
-import { DataSource, Not, Repository } from 'typeorm';
-import { User } from './entities/user.entity';
 import { ImageService } from 'src/image/image.service';
-import { Image } from 'src/image/entities/image.entity';
+import { PrismaService } from 'src/prisma/prisma.service';
+import { Image } from '@prisma/client';
 
 @Injectable()
 export class UserService {
-  private readonly userRepository: Repository<User>
- 
   constructor(
-    private dataSource: DataSource,
-    private readonly imageService: ImageService
-  ) {
-    this.userRepository = this.dataSource.getRepository(User)
-  }
+    private readonly imageService: ImageService,
+    private readonly prisma: PrismaService
+  ) {}
 
   async findOneProfile(userId: number) {
-    await this.findOne(userId)
-
-    const user = await this.userRepository.createQueryBuilder("user")
-      .leftJoinAndSelect("user.groups", "groups")
-      .leftJoinAndSelect("user.images", "images")
-      .where("user.id = :id", { id: userId })
-      .select([
-        'user.id', 'user.username', 'user.email', 'user.birthDate', 'user.created_at', 
-        'groups.id', 'groups.name', 'images.id', 'images.url'
-      ])
-      .getOne()
-
-    return user
+    return await this.findOne(userId)
   }
 
   async create(createUserDto: CreateUserDto) {
-    const userPlain = this.userRepository.create(createUserDto)
     const images: Image[] = []
+    const {email, password, username, file, birthDate} = createUserDto
 
-    if (createUserDto.file) {
-      const image = await this.imageService.uploadImage(createUserDto.file)
+    if (file) {
+      const image = await this.imageService.uploadImage(file)
 
       images.push(image)
     }
 
-    userPlain.images = images
-
-    const user = await this.userRepository.save(userPlain)
+    const user = await this.prisma.user.create({
+      data: {
+        email, 
+        password, 
+        username, 
+        birthDate,
+        images: {
+          create: images.map(image => ({image: {connect: {id: image.id}}}))
+        }
+      }
+    })
 
     return user
   }
 
   async findAll() {
-    return await this.userRepository.find()
+    return await this.prisma.user.findMany()
   }
 
   async findByEmail(email: string) {
-    return await this.userRepository.findOne({where: {email}})
+    return await this.prisma.user.findFirst({where: {email}})
   }
 
   async findOne(id: number) {
-    const user = await this.userRepository.findOne({where: {id}})
-
-    if (!user) {
-      throw new NotFoundException("User not found")
-    }
-
-    return user
+    return await this.prisma.user.findFirstOrThrow({where: {id}})
   }
 
   async updateToken(id: number, token: string) {
-    const user = await this.findOne(id)
-
-    user.token = token
-    
-    return await this.userRepository.save(user)
+    return await this.prisma.user.update({
+      where: {id},
+      data: {token}
+    })
   }
 
   async confirmEmail(email: string) {
     const user = await this.findByEmail(email)
 
-    if (!user) {
-      throw new NotFoundException("User not found")
-    }
-
-    user.isVerified = true
-
-    return await this.userRepository.save(user)
+    return await this.prisma.user.update({
+      where: {id: user.id}, 
+      data: {isVerified: true}
+    })
   }
 
   async update(id: number, updateUserDto: UpdateUserDto) {
-    const user = await this.findOne(id)
-    const userMerged = this.userRepository.merge(user, updateUserDto)
-    const images: Image[] = user.images
+    const images: Image[] = []
+    const {username, file, birthDate} = updateUserDto
 
-    if (updateUserDto.file) {
-      const image = await this.imageService.uploadImage(updateUserDto.file)
-      
+    if (file) {
+      const image = await this.imageService.uploadImage(file)
+
       images.push(image)
     }
 
-    userMerged.images = images
-
-    await this.userRepository.save(userMerged)
- 
-    return await this.findOneProfile(id)
+    return await this.prisma.user.update({
+      where: {id},
+      data: { 
+        username, 
+        birthDate,
+        images: {
+          create: images.map(image => ({image: {connect: {id: image.id}}}))
+        }
+      }
+    })
   }
 
   async remove(id: number) {
-    await this.findOne(id)
-    await this.userRepository.delete(id)
-    
-    return "User deleted"
+    return await this.prisma.user.delete({where: {id}})
   }
 }
