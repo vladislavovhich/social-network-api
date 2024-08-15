@@ -24,6 +24,8 @@ export class VoteService {
   }
 
   async update(id: number, voteDto: VoteOperationDto) {
+    await this.findOne(id)
+    
     const {value} = voteDto
 
     return await this.prisma.vote.update({

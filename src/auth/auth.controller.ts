@@ -12,11 +12,15 @@ import { multerOptions } from 'src/config/multer.config';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { UserProfileDto } from 'src/user/dto/user-profile.dto';
 import { User } from '@prisma/client';
+import { UserService } from 'src/user/user.service';
 
 @ApiTags("Auth")
 @Controller('auth')
 export class AuthController {
-    constructor (private readonly authService: AuthService) {}
+    constructor (
+        private readonly authService: AuthService,
+        private readonly userService: UserService
+    ) {}
 
     @Get('confirm')
     @ApiExcludeEndpoint()
@@ -44,7 +48,7 @@ export class AuthController {
         response.cookie("jwt", result.tokens.accessToken, {httpOnly: true, secure: true})
         response.cookie("jwt-refresh", result.tokens.refreshToken, {httpOnly: true, secure: true})
 
-        return result.user
+        return this.userService.findOneProfile(result.user.id)
     }
 
     @Post('sign-up') 
@@ -60,7 +64,7 @@ export class AuthController {
         response.cookie("jwt", result.tokens.accessToken, {httpOnly: true, secure: true})
         response.cookie("jwt-refresh", result.tokens.refreshToken, {httpOnly: true, secure: true})
 
-        return result.user
+        return this.userService.findOneProfile(result.user.id)
     }
 
     @Get('log-out') 

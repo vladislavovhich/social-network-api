@@ -10,6 +10,7 @@ import { VoteOperationDto } from 'src/vote/dto/vote-operation.dto';
 import { Image, Tag } from '@prisma/client';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { VotePostDto } from './dto/vote-post.dto';
+import { GetPostDto } from './dto/get-post.dto';
 
 @Injectable()
 export class PostService {
@@ -17,11 +18,14 @@ export class PostService {
     private readonly tagService: TagService,
     private readonly imageService: ImageService,
     private readonly voteService: VoteService,
-    private readonly prisma: PrismaService
+    private readonly prisma: PrismaService,
+    private readonly groupService: GroupService
   ) {}
 
   async create(createPostDto: CreatePostDto) {
     const {text, groupId, publisherId, tags: tagNames, files} = createPostDto
+
+    await this.groupService.findOne(groupId)
 
     const images: Image[] = []
     const tags = await this.tagService.handleTags(tagNames, publisherId)
@@ -49,12 +53,68 @@ export class PostService {
     })
   }
 
+  async getGroupPost(postId: number) {
+    const post = await this.prisma.post.findFirst({
+      where: {id: postId},
+      select: {
+        id: true,
+        text: true,
+        publisher: {
+          select: {
+            id: true,
+            username: true,
+            images: {
+              select: {
+                image: true
+              }
+            }
+          }
+        },
+        createdAt: true,
+        images: {
+          select: {
+            image: true
+          }
+        },
+        tags: {
+          select: {
+            tag: true
+          }
+        },
+        _count: {
+          select: {
+            comments: true,
+            views: true
+          }
+        },
+      }
+    })
+    const postVotes = await this.prisma.vote.aggregate({
+      _sum: {
+        value: true
+      },
+      where: {
+        posts: {
+          some: {
+            post: {
+              id: postId
+            }
+          }
+        }
+      }
+    })
+
+    return new GetPostDto({...post, _sum: postVotes})
+  }
+
   async findOne(id: number) {
     return await this.prisma.post.findFirstOrThrow({where: {id}})
   }
 
   async update(id: number, updatePostDto: UpdatePostDto) {
     const {text, publisherId, tags: tagNames, files} = updatePostDto
+
+    await this.findOne(id)
 
     const images: Image[] = []
     const tagsRaw = await this.tagService.handleTags(tagNames, publisherId)
@@ -93,16 +153,74 @@ export class PostService {
   }
 
   async remove(id: number) {
+    await this.findOne(id)
+
     return await this.prisma.post.delete({where: {id}})
   }
 
   async getGroupPosts(groupId: number) {
-    return await this.prisma.group.findFirstOrThrow({
-      where: {id: groupId},
+    await this.groupService.findOne(groupId)
+
+    const posts = await this.prisma.post.findMany({
+      where: {
+        groupId
+      },
       select: {
-        posts: true
+        id: true,
+        text: true,
+        publisher: {
+          select: {
+            id: true,
+            username: true,
+            images: {
+              select: {
+                image: true
+              }
+            }
+          }
+        },
+        createdAt: true,
+        images: {
+          select: {
+            image: true
+          }
+        },
+        tags: {
+          select: {
+            tag: true
+          }
+        },
+        _count: {
+          select: {
+            comments: true,
+            views: true
+          }
+        },
       }
     })
+
+    const groupPosts: GetPostDto[] = []
+
+    for (let post of posts) {
+      const postVotes = await this.prisma.vote.aggregate({
+        _sum: {
+          value: true
+        },
+        where: {
+          posts: {
+            some: {
+              post: {
+                id: post.id
+              }
+            }
+          }
+        }
+      })
+
+      groupPosts.push(new GetPostDto({...post, _sum: postVotes}))
+    }
+
+    return groupPosts
   }
 
   async vote(votePostDto: VotePostDto) {

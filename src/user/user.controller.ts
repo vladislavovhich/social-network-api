@@ -44,10 +44,12 @@ export class UserController {
     @UseGuards(AccessTokenGuard)
     @UseInterceptors(FileInterceptor('file', multerOptions))
 
-    update(@Body() updateUserDto: UpdateUserDto, @UploadedFile() file: Express.Multer.File, @GetUser() user: User) {
+    async update(@Body() updateUserDto: UpdateUserDto, @UploadedFile() file: Express.Multer.File, @GetUser() user: User) {
         updateUserDto.file = file
         
-        return this.userService.update(user.id, updateUserDto);
+        await this.userService.update(user.id, updateUserDto);
+
+        return this.userService.findOneProfile(user.id)
     }
 
     @Delete('profile')

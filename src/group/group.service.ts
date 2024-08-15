@@ -5,6 +5,7 @@ import { PrismaService } from 'src/prisma/prisma.service';
 import { CategoryService } from 'src/category/category.service';
 import { Group, User, Image } from '@prisma/client';
 import { ImageService } from 'src/image/image.service';
+import { GetOneGroupDto } from './dto/get-one-group.dto';
 
 @Injectable()
 export class GroupService {
@@ -15,6 +16,8 @@ export class GroupService {
   ) {}
 
   async isSubscribed(groupId: number, userId: number) {
+    await this.findOne(groupId)
+
     return await this.prisma.groupSub.findFirst({
       where: {userId, groupId}
     })
@@ -75,16 +78,80 @@ export class GroupService {
     })
   }
 
-  async findAll() {
-    return this.prisma.group.findMany()
+  async getAllGroups() {
+    const groups = await this.prisma.group.findMany({
+      include: {
+        _count: {
+          select: {
+            subs: true
+          }
+        },
+        categories: {
+          include: {
+            category: true
+          }
+        },
+        images: {
+          include: {
+            image: true
+          }
+        },
+        admin: {
+          include: {
+            images: {
+              include: {
+                image: true
+              }
+            }
+          }
+        }
+      }
+    })
+
+    return groups.map(group => new GetOneGroupDto(group))
   }
 
   async findOne(id: number) {
     return await this.prisma.group.findFirstOrThrow({where: {id}})
   }
 
+  async getOneGroup(id: number) {
+    const group = await this.prisma.group.findFirstOrThrow({
+      where: {id},
+      include: {
+        _count: {
+          select: {
+            subs: true
+          }
+        },
+        categories: {
+          include: {
+            category: true
+          }
+        },
+        images: {
+          include: {
+            image: true
+          }
+        },
+        admin: {
+          include: {
+            images: {
+              include: {
+                image: true
+              }
+            }
+          }
+        }
+      }
+    })
+
+    return new GetOneGroupDto(group)
+  }
 
   async update(id: number, updateGroupDto: UpdateGroupDto) {
+    await this.findOne(id)
+
     const {adminId, name, description, file, categories: categoryNames} = updateGroupDto
 
     const categories = await this.categoryService.handleCategories(categoryNames, adminId)
@@ -109,6 +176,8 @@ export class GroupService {
   }
 
   async remove(id: number) {
+    await this.findOne(id)
+
     return await this.prisma.group.delete({where: {id}})
   }
 }

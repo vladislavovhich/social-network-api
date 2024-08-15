@@ -7,7 +7,7 @@ import { ApiBadRequestResponse, ApiConsumes, ApiCreatedResponse, ApiForbiddenRes
 import { AccessTokenGuard } from 'src/auth/guards/access-token.guard';
 import { multerOptions } from 'src/config/multer.config';
 import { GetUser } from 'src/common/decorators/extract-user.decorator';
-import { GetOneGroup } from './dto/get-one-group.dto';
+import { GetOneGroupDto } from './dto/get-one-group.dto';
 import { User } from '@prisma/client';
 
 @ApiTags('Group')
@@ -42,39 +42,41 @@ export class GroupController {
   @Post()
 
   @ApiConsumes("multipart/form-data")
-  @ApiCreatedResponse({description: "Created Group", type: GetOneGroup})
+  @ApiCreatedResponse({description: "Created Group", type: GetOneGroupDto})
   @ApiResponse({status: 401, description: "User not authorized"})
   @ApiBadRequestResponse({description: "Incorrect input data"})
 
   @UseGuards(AccessTokenGuard)
   @UseInterceptors(FileInterceptor('file', multerOptions))
 
-  create(@Body() createGroupDto: CreateGroupDto, @UploadedFile() file: Express.Multer.File, @GetUser() user: User) {
+  async create(@Body() createGroupDto: CreateGroupDto, @UploadedFile() file: Express.Multer.File, @GetUser() user: User) {
     createGroupDto.file = file
     createGroupDto.adminId = user.id
 
-    return this.groupService.create(createGroupDto)
+    const group = await this.groupService.create(createGroupDto)
+
+    return this.groupService.getOneGroup(group.id)
   }
 
   @Get()
-  @ApiResponse({status: 200, type: [GetOneGroup], description: "List of Groups"})
+  @ApiResponse({status: 200, type: [GetOneGroupDto], description: "List of Groups"})
   findAll() {
-    return this.groupService.findAll();
+    return this.groupService.getAllGroups();
   }
 
   @Get(':id')
 
   @ApiNotFoundResponse({description: "Group not found"})
-  @ApiResponse({status: 200, type: GetOneGroup, description: "Found Group"})
+  @ApiResponse({status: 200, type: GetOneGroupDto, description: "Found Group"})
 
   findOne(@Param('id') id: string) {
-    return this.groupService.findOne(+id);
+    return this.groupService.getOneGroup(+id);
   }
 
   @Patch(':id')
 
   @ApiConsumes("multipart/form-data")
-  @ApiResponse({status: 200, description: "Updated Group", type: GetOneGroup})
+  @ApiResponse({status: 200, description: "Updated Group", type: GetOneGroupDto})
   @ApiNotFoundResponse({description: "Group not found"})
   @ApiBadRequestResponse({description: "Incorrect input data"})
   @ApiResponse({status: 401, description: "User not authorized"})
@@ -83,11 +85,13 @@ export class GroupController {
   @UseGuards(AccessTokenGuard)
   @UseInterceptors(FileInterceptor('file', multerOptions))
 
-  update(@Param('id') id: string, @Body() updateGroupDto: UpdateGroupDto, @UploadedFile() file: Express.Multer.File, @GetUser() user: User) {
+  async update(@Param('id') id: string, @Body() updateGroupDto: UpdateGroupDto, @UploadedFile() file: Express.Multer.File, @GetUser() user: User) {
     updateGroupDto.file = file
     updateGroupDto.adminId = user.id
 
-    return this.groupService.update(+id, updateGroupDto);
+    await this.groupService.update(+id, updateGroupDto);
+
+    return this.groupService.getOneGroup(+id)
   }
 
   @Delete(':id')
@@ -99,6 +103,6 @@ export class GroupController {
   @UseGuards(AccessTokenGuard)
   
   remove(@Param('id') id: string) {
-    return this.groupService.remove(+id);
+    this.groupService.remove(+id);
   }
 }

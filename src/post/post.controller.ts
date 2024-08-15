@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Put, Patch, Param, Delete, UseGuards, UseInterceptors, UploadedFile, UploadedFiles, forwardRef, Inject } from '@nestjs/common';
+import { Controller, Get, Post, Body, Put, Patch, Param, Delete, UseGuards, UseInterceptors, UploadedFile, UploadedFiles, forwardRef, Inject, Res } from '@nestjs/common';
 import { PostService } from './post.service';
 import { CreatePostDto } from './dto/create-post.dto';
 import { UpdatePostDto } from './dto/update-post.dto';
@@ -12,13 +12,13 @@ import { GetPostDto } from './dto/get-post.dto';
 import { User } from '@prisma/client';
 import { VotePostDto } from './dto/vote-post.dto';
 import { ViewOperationDto } from 'src/view/dto/view-operation.dto';
+import { Response } from 'express';
 
 @ApiTags("Post")
 @Controller('/')
 export class PostController {
   constructor(
     private readonly postService: PostService,
-    @Inject(forwardRef(() => ViewService))
     private readonly viewService: ViewService
   ) {}
 
@@ -33,12 +33,14 @@ export class PostController {
   @UseGuards(AccessTokenGuard)
   @UseInterceptors(FilesInterceptor('files', 10, multerOptions))
 
-  create(@Param('id') id: string, @Body() createPostDto: CreatePostDto, @GetUser() user: User, @UploadedFiles() files: Express.Multer.File[]) {
+  async create(@Param('id') id: string, @Body() createPostDto: CreatePostDto, @GetUser() user: User, @UploadedFiles() files: Express.Multer.File[]) {
     createPostDto.groupId = +id
     createPostDto.publisherId = user.id
     createPostDto.files = files
 
-    return this.postService.create(createPostDto);
+    const post = await this.postService.create(createPostDto);
+
+    return this.postService.getGroupPost(post.id)
   }
 
   @Get('/groups/:id/posts')
@@ -56,7 +58,7 @@ export class PostController {
   @ApiNotFoundResponse({description: "Post not found"})
 
   findOne(@Param('id') id: string) {
-    return this.postService.findOne(+id);
+    return this.postService.getGroupPost(+id);
   }
 
   @Put('/posts/:id/upvote')
@@ -89,16 +91,18 @@ export class PostController {
 
   @Post('/posts/:id/view')
 
-  @ApiOkResponse({type: GetPostDto, description: "Viewed Post"})
+  @ApiOkResponse({description: "Post marked as viewed"})
   @ApiNotFoundResponse({description: "Post not found"})
   @ApiResponse({status: 401, description: "Not authorized"})
 
   @UseGuards(AccessTokenGuard)
 
-  markPostAsViewed(@Param('id') id: string, @GetUser() user: User) {
+  markPostAsViewed(@Param('id') id: string, @GetUser() user: User, @Res() response: Response) {
     const viewDto = new ViewOperationDto(user.id, +id)
 
-    return this.viewService.markPostAsViewed(viewDto);
+    this.viewService.markPostAsViewed(viewDto);
+
+    response.sendStatus(200)
   }
 
   @Patch('/posts/:id')
@@ -113,11 +117,13 @@ export class PostController {
   @UseGuards(AccessTokenGuard)
   @UseInterceptors(FilesInterceptor('files', 10, multerOptions))
 
-  update(@Param('id') id: string, @Body() updatePostDto: UpdatePostDto, @GetUser() user: User, @UploadedFiles() files: Express.Multer.File[]) {
+  async update(@Param('id') id: string, @Body() updatePostDto: UpdatePostDto, @GetUser() user: User, @UploadedFiles() files: Express.Multer.File[]) {
     updatePostDto.publisherId = user.id
     updatePostDto.files = files
 
-    return this.postService.update(+id, updatePostDto);
+    await this.postService.update(+id, updatePostDto);
+
+    return this.postService.getGroupPost(+id)
   }
 
   @Delete('/posts/:id')
@@ -129,7 +135,9 @@ export class PostController {
 
   @UseGuards(AccessTokenGuard)
   
-  remove(@Param('id') id: string) {
-    return this.postService.remove(+id);
+  async remove(@Param('id') id: string, @Res() response: Response) {
+    await this.postService.remove(+id);
+
+    response.sendStatus(200)
   }
 }
