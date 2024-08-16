@@ -7,10 +7,16 @@ import { TagService } from 'src/tag/tag.service';
 import { ImageService } from 'src/image/image.service';
 import { VoteService } from 'src/vote/vote.service';
 import { VoteOperationDto } from 'src/vote/dto/vote-operation.dto';
-import { Image, Tag } from '@prisma/client';
+import { Image, Post, Tag } from '@prisma/client';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { VotePostDto } from './dto/vote-post.dto';
 import { GetPostDto } from './dto/get-post.dto';
+import { endOfDay, endOfHour, endOfMonth, endOfToday, endOfWeek, endOfYear, startOfDay, startOfHour, startOfMonth, startOfToday, startOfWeek, startOfYear } from 'date-fns';
+import { Prisma } from '@prisma/client';
+import { PaginationDto } from 'src/common/dto/pagination.dto';
+import { PostPaginationResponseDto } from './dto/post-pagination-response.dto';
+import { DateFilterType, PostFilterType } from 'src/common/types';
+import { PostPaginationDto } from './dto/post-pagination.dto';
 
 @Injectable()
 export class PostService {
@@ -53,42 +59,36 @@ export class PostService {
     })
   }
 
+  async getFeedPosts(userId: number, paginationDto: PostPaginationDto) {
+    const today = new Date()
+    const todayStart = startOfDay(today)
+    const todayEnd = endOfDay(today)
+
+    const posts = await this.findMany({
+      createdAt: {
+        gte: todayStart,
+        lte: todayEnd
+      },
+      group: {
+        subs: {
+          some: {
+            userId: userId
+          }
+        }
+      }
+    }, [
+      { createdAt: "desc" }
+    ], paginationDto)
+
+    return posts
+  }
+
   async getGroupPost(postId: number) {
     const post = await this.prisma.post.findFirst({
       where: {id: postId},
-      select: {
-        id: true,
-        text: true,
-        publisher: {
-          select: {
-            id: true,
-            username: true,
-            images: {
-              select: {
-                image: true
-              }
-            }
-          }
-        },
-        createdAt: true,
-        images: {
-          select: {
-            image: true
-          }
-        },
-        tags: {
-          select: {
-            tag: true
-          }
-        },
-        _count: {
-          select: {
-            comments: true,
-            views: true
-          }
-        },
-      }
+      select: this.getSelectParams()
     })
+
     const postVotes = await this.prisma.vote.aggregate({
       _sum: {
         value: true
@@ -104,7 +104,7 @@ export class PostService {
       }
     })
 
-    return new GetPostDto({...post, _sum: postVotes})
+    return new GetPostDto({...post, _sum: postVotes._sum.value || 0})
   }
 
   async findOne(id: number) {
@@ -152,20 +152,8 @@ export class PostService {
     })
   }
 
-  async remove(id: number) {
-    await this.findOne(id)
-
-    return await this.prisma.post.delete({where: {id}})
-  }
-
-  async getGroupPosts(groupId: number) {
-    await this.groupService.findOne(groupId)
-
-    const posts = await this.prisma.post.findMany({
-      where: {
-        groupId
-      },
-      select: {
+  private getSelectParams() {
+    return {
         id: true,
         text: true,
         publisher: {
@@ -196,12 +184,67 @@ export class PostService {
             views: true
           }
         },
+      } 
+  }
+
+  getFilterParams(filterParams: DateFilterType) {
+    const today = new Date()
+
+    switch (filterParams) {
+      case "week": {
+        const start = startOfWeek(today)
+        const end = endOfWeek(today)
+        
+        return {
+          createdAt: {
+            gte: start,
+            lte: end
+          }
+        }
       }
-    })
+      case "today": {
+        const start = startOfToday()
+        const end = endOfToday()
 
-    const groupPosts: GetPostDto[] = []
+        return {
+          createdAt: {
+            gte: start,
+            lte: end
+          }
+        }
+      }
+      case "month": {
+        const start = startOfMonth(today)
+        const end = endOfMonth(today)
 
-    for (let post of posts) {
+        return {
+          createdAt: {
+            gte: start,
+            lte: end
+          }
+        }
+      }
+      case "year": {
+        const start = startOfYear(today)
+        const end = endOfYear(today)
+
+        return {
+          createdAt: {
+            gte: start,
+            lte: end
+          }
+        }
+      }
+      default: {
+        return {}
+      }
+    }
+  }
+
+  private async handlePostsWithVotes(postsMany: any) {
+    const posts: GetPostDto[] = []
+
+    for (let post of postsMany) {
       const postVotes = await this.prisma.vote.aggregate({
         _sum: {
           value: true
@@ -217,10 +260,121 @@ export class PostService {
         }
       })
 
-      groupPosts.push(new GetPostDto({...post, _sum: postVotes}))
+      posts.push(new GetPostDto({...post, _sum: postVotes._sum.value || 0}))
     }
 
-    return groupPosts
+    return posts
+  }
+
+  async findMany(
+    whereOptions: Prisma.PostWhereInput = {}, 
+    orderByOptions: Prisma.PostOrderByWithRelationInput[] = [],
+    paginationOptions: PostPaginationDto
+  ) {
+    const {offset, page, pageSize} = paginationOptions
+
+    const postsMany = await this.prisma.post.findMany({
+      skip: offset,
+      take: pageSize,
+      where: whereOptions,
+      select: this.getSelectParams(),
+      orderBy: orderByOptions
+    })
+
+    const posts = await this.handlePostsWithVotes(postsMany)
+
+    const postCount = await this.prisma.post.count({
+      where: whereOptions,
+      orderBy: orderByOptions
+    })
+
+    return new PostPaginationResponseDto(posts, postCount, paginationOptions)
+  }
+
+  async remove(id: number) {
+    await this.findOne(id)
+
+    return await this.prisma.post.delete({where: {id}})
+  }
+
+  async getGroupPosts(groupId: number, paginationDto: PostPaginationDto) {
+    await this.groupService.findOne(groupId)
+
+    const {post, pageSize, offset} = paginationDto
+    const dateFilter = this.getFilterParams(paginationDto.date)
+
+    switch (post) {
+      case "hot": {
+        const today = new Date()
+        const hourStart = startOfHour(today)
+        const hourEnd = endOfHour(today)
+        
+        const result = await this.prisma.$queryRaw<{ id: number; votesSum: number }[]>`
+          SELECT "Post".id, COALESCE(SUM("Vote".value), 0) as "votesSum"
+          FROM "Post"
+          LEFT JOIN "PostVote" ON "Post".id = "PostVote"."postId"
+          LEFT JOIN "Vote" ON "PostVote"."voteId" = "Vote".id
+          WHERE "Vote"."createdAt" BETWEEN ${hourStart} AND ${hourEnd}
+          AND "Post"."groupId" = ${groupId}
+          GROUP BY "Post".id
+          ORDER BY "votesSum" DESC
+          LIMIT ${pageSize}
+          OFFSET ${offset};
+        `
+
+        const posts = await this.findMany({
+          id: {
+            in: result.map(res => res.id)
+          }
+        }, [], paginationDto)
+
+        posts.items.sort((p1, p2) => p2.votes - p1.votes)
+
+        return posts
+      }
+      case "controversial": {
+        const posts = await this.findMany({
+          groupId, ...dateFilter
+        }, [
+          {
+            comments: {
+              _count: "desc"
+            }
+          },
+          {
+            createdAt: "desc"
+          }
+        ], paginationDto)
+
+        return posts
+      }
+      case "popular": {
+        const result = await this.prisma.$queryRaw<{ id: number; votesSum: number }[]>`
+          SELECT "Post".id, COALESCE(SUM("Vote".value), 0) as "votesSum"
+          FROM "Post"
+          LEFT JOIN "PostVote" ON "Post".id = "PostVote"."postId"
+          LEFT JOIN "Vote" ON "PostVote"."voteId" = "Vote".id
+          WHERE "Post"."createdAt" BETWEEN ${dateFilter.createdAt.gte} AND ${dateFilter.createdAt.lte}
+          AND "Post"."groupId" = ${groupId}
+          GROUP BY "Post".id
+          ORDER BY "votesSum" DESC
+          LIMIT ${pageSize}
+          OFFSET ${offset};
+        `
+
+        const posts = await this.findMany({
+          id: {
+            in: result.map(res => res.id)
+          }
+        }, [], paginationDto)
+
+        posts.items.sort((p1, p2) => p2.votes - p1.votes)
+
+        return posts
+        }
+      default: 
+        return await this.findMany({ groupId, ...dateFilter}, [{ createdAt: "desc" }], paginationDto)
+    }
   }
 
   async vote(votePostDto: VotePostDto) {

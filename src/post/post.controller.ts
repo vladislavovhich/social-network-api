@@ -1,8 +1,8 @@
-import { Controller, Get, Post, Body, Put, Patch, Param, Delete, UseGuards, UseInterceptors, UploadedFile, UploadedFiles, forwardRef, Inject, Res } from '@nestjs/common';
+import { Controller, Get, Post, Body, Put, Patch, Param, Delete, UseGuards, UseInterceptors, UploadedFile, UploadedFiles, forwardRef, Inject, Res, Query } from '@nestjs/common';
 import { PostService } from './post.service';
 import { CreatePostDto } from './dto/create-post.dto';
 import { UpdatePostDto } from './dto/update-post.dto';
-import { ApiBadRequestResponse, ApiConsumes, ApiNotFoundResponse, ApiOkResponse, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { ApiBadRequestResponse, ApiConsumes, ApiNotFoundResponse, ApiOkResponse, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { FileInterceptor, FilesInterceptor } from '@nestjs/platform-express';
 import { AccessTokenGuard } from 'src/auth/guards/access-token.guard';
 import { multerOptions } from 'src/config/multer.config';
@@ -13,6 +13,9 @@ import { User } from '@prisma/client';
 import { VotePostDto } from './dto/vote-post.dto';
 import { ViewOperationDto } from 'src/view/dto/view-operation.dto';
 import { Response } from 'express';
+import { PaginationDto } from 'src/common/dto/pagination.dto';
+import { PostPaginationResponseDto } from './dto/post-pagination-response.dto';
+import { PostPaginationDto } from './dto/post-pagination.dto';
 
 @ApiTags("Post")
 @Controller('/')
@@ -21,6 +24,18 @@ export class PostController {
     private readonly postService: PostService,
     private readonly viewService: ViewService
   ) {}
+  
+
+  @Get('/users/feed')
+
+  @ApiOkResponse({type: PostPaginationResponseDto})
+
+  @UseGuards(AccessTokenGuard)
+
+  getFeedPosts(@GetUser() user: User, @Query() paginationDto: PostPaginationDto) {
+    return this.postService.getFeedPosts(user.id, paginationDto)
+  }
+
 
   @Post('/groups/:id/posts')
 
@@ -43,13 +58,14 @@ export class PostController {
     return this.postService.getGroupPost(post.id)
   }
 
+
   @Get('/groups/:id/posts')
 
   @ApiOkResponse({type: [GetPostDto]})
   @ApiNotFoundResponse({description: "Group not found"})
 
-  getGroupPosts(@Param('id') id: string) {
-    return this.postService.getGroupPosts(+id)
+  getGroupPosts(@Param('id') id: string, @Query() paginationDto: PostPaginationDto) {
+    return this.postService.getGroupPosts(+id, paginationDto)
   }
 
   @Get('/posts/:id')

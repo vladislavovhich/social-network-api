@@ -14,7 +14,7 @@ export class GetPostDto {
     views: number
 
     @ApiProperty()
-    votes: number
+    votes: number = 0
 
     @ApiProperty()
     comments: number
@@ -32,7 +32,6 @@ export class GetPostDto {
     tags: GetTagDto[]
 
     constructor(post: any) {
-        console.log(post.publisher)
         this.id = post.id
         this.text = post.text
         this.comments = post._count.comments
@@ -40,7 +39,7 @@ export class GetPostDto {
         this.publisher = new UserInfoDto(post.publisher)
         this.images = post.images.map(image => new GetImageDto(image.image))
         this.tags = post.tags.map(tag => new GetTagDto(tag.tag))
-        this.votes = post._sum.value
+        this.votes = post._sum
         this.created_at = post.createdAt
     }
 }
