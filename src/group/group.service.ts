@@ -8,6 +8,8 @@ import { ImageService } from 'src/image/image.service';
 import { GetOneGroupDto } from './dto/get-one-group.dto';
 import { GroupPaginationDto } from './dto/group-pagination.dto';
 import { GroupPaginationResponseDto } from './dto/group-pagination-response.dto';
+import { ModeratorOpDto } from './dto/moderator-op.dto';
+import { UserInfoDto } from 'src/user/dto/user-info.dto';
 
 @Injectable()
 export class GroupService {
@@ -17,12 +19,89 @@ export class GroupService {
     private readonly imageService: ImageService
   ) {}
 
-  async isBelongs(groupId: number, userId: number) {
+
+  async isModerator(userId: number, groupId: number) {
+    await this.prisma.user.findFirstOrThrow({where: {id: userId}})
+
+    const moderator = await this.prisma.groupModerator.findFirst({
+      where: {
+        groupId,
+        moderatorId: userId
+      }
+    })
+
+    return !!moderator
+  }
+
+  async addModerator(moderatorOpDto: ModeratorOpDto) {
+    const {groupId, userId} = moderatorOpDto
+
+    await this.findOne(groupId)
+    
+    const isModerator = await this.isModerator(userId, groupId)
+    const isAdmin = await this.isAdmin(groupId, userId)
+
+    if (isAdmin) {
+      throw new BadRequestException("User is admin, so you can't make him to be moderator")
+    }
+
+    if (isModerator) {
+      throw new BadRequestException("This user is already a moderator!")
+    }
+
+    await this.prisma.groupModerator.create({
+      data: {
+        group: {connect: {id: groupId}},
+        moderator: {connect: {id: userId}}
+      }
+    })
+  }
+
+  async removeModerator(moderatorOpDto: ModeratorOpDto) {
+    const {groupId, userId} = moderatorOpDto
+
+    await this.findOne(groupId)
+    
+    const isModerator = await this.isModerator(userId, groupId)
+
+    if (!isModerator) {
+      throw new BadRequestException("This user isn't moderator, so you can't remove him!")
+    }
+
+    await this.prisma.groupModerator.deleteMany({
+      where: {groupId, moderatorId: userId}
+    })
+  }
+
+  async getModerators(groupId: number) {
+    const group = await this.prisma.group.findFirstOrThrow({
+      where: {id: groupId},
+      include: {
+        moderators: {
+          include: {
+            moderator: {
+              include: {
+                images: {
+                  include: {
+                    image: true
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    })
+
+    const moderatorDtos = group.moderators.map(moderator => new UserInfoDto(moderator.moderator))
+
+    return moderatorDtos
+  }
+
+  async isAdmin(groupId: number, userId: number) {
     const item = await this.findOne(groupId)
 
-    if (item.adminId != userId) {
-      throw new ForbiddenException("You're not admin of the group!")
-    }
+    return item.adminId == userId
   }
 
   async isSubscribed(groupId: number, userId: number) {
@@ -180,8 +259,6 @@ export class GroupService {
    
     const {adminId, name, description, file, categories: categoryNames} = updateGroupDto
 
-    await this.isBelongs(id, adminId)
-
     const categories = await this.categoryService.handleCategories(categoryNames, adminId)
     const images: Image[] = []
 
@@ -205,8 +282,6 @@ export class GroupService {
 
   async remove(id: number) {
     const group = await this.findOne(id)
-
-    await this.isBelongs(id, group.adminId)
 
     return await this.prisma.group.delete({where: {id}})
   }

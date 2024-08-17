@@ -6,6 +6,10 @@ import { ApiBadRequestResponse, ApiForbiddenResponse, ApiNotFoundResponse, ApiOk
 import { AccessTokenGuard } from 'src/auth/guards/access-token.guard';
 import { PaginationDto } from 'src/common/dto/pagination.dto';
 import { BannedUsersResponseDto } from './dto/banned-users-response.dto';
+import { GroupId } from 'src/group/decorators/group-id.decorator';
+import { PassOnly } from 'src/group/decorators/pass-type.decorator';
+import { UserPassEnum } from 'src/group/group.types';
+import { PassUserGuard } from 'src/group/guards/pass-user.guard';
 
 @ApiTags("Ban")
 @Controller('/')
@@ -21,7 +25,12 @@ export class BanController {
 
   @ApiResponse({status: 401, description: "Not authorized"})
 
+  @PassOnly(UserPassEnum.Admin)
+  @GroupId("groupId")
+  @UseGuards(PassUserGuard)
+
   @UseGuards(AccessTokenGuard)
+  
   ban(@Param() createBanParamDto: CreateBanParamDto, @Body() createBanDto: CreateBanDto) {
     createBanDto.groupId = createBanParamDto.groupId
     createBanDto.userId = createBanParamDto.userId
@@ -38,6 +47,10 @@ export class BanController {
   @ApiBadRequestResponse({description: "User is not banned, so you can't unban him"})
   @ApiResponse({status: 401, description: "Not authorized"})
 
+  @PassOnly(UserPassEnum.Admin)
+  @GroupId("groupId")
+  @UseGuards(PassUserGuard)
+
   @UseGuards(AccessTokenGuard)
   unban(@Param() createBanParamDto: CreateBanParamDto) {
     return this.banService.unban(createBanParamDto)
@@ -50,6 +63,10 @@ export class BanController {
   @ApiNotFoundResponse({description: "Group not found"})
   @ApiForbiddenResponse({description: "Only admin and moderators are allowed to see banned users list"})
   @ApiResponse({status: 401, description: "Not authorized"})
+
+  @PassOnly(UserPassEnum.AdminAndModerators)
+  @GroupId("groupId")
+  @UseGuards(PassUserGuard)
 
   @UseGuards(AccessTokenGuard)
 

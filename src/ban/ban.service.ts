@@ -24,7 +24,12 @@ export class BanService {
     await this.groupService.findOne(groupId)
 
     const isBanned = await this.isBanned(userId, groupId)
+    const isAdmin = await this.groupService.isAdmin(groupId, userId)
 
+    if (isAdmin) {
+      throw new BadRequestException("You can't ban admin!")
+    }
+    
     if (isBanned) {
       throw new BadRequestException("User is already banned!")
     }
