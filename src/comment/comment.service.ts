@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { CreateCommentDto } from './dto/create-comment.dto';
 import { UpdateCommentDto } from './dto/update-comment.dto';
 import { PostService } from 'src/post/post.service';
@@ -9,7 +9,6 @@ import { VoteCommentDto } from './dto/vote-comment.dto';
 import { CommentTreeDto } from './dto/comment-tree.dto';
 import { GetCommentDto } from './dto/get-comment.dto';
 import { Comment } from '@prisma/client';
-
 @Injectable()
 export class CommentService {
   constructor(
@@ -17,6 +16,14 @@ export class CommentService {
     private readonly voteService: VoteService,
     private readonly prisma: PrismaService
   ) {}
+
+  async isBelongs(commentId: number, userId: number) {
+    const item = await this.findOne(commentId)
+
+    if (item.commenterId != userId) {
+      throw new ForbiddenException("You can't edit this comment!")
+    }
+  }
   
   async create(createCommentDto: CreateCommentDto) {
     const {text, commenterId, commentId, postId} = createCommentDto
@@ -173,6 +180,8 @@ export class CommentService {
 
     const {text, commenterId, commentId, postId} = updateCommentDto
 
+    await this.isBelongs(id, commenterId)
+
     const comment = await this.prisma.comment.update({
       where: {id},
       data: {
@@ -184,7 +193,9 @@ export class CommentService {
   }
 
   async remove(id: number) {
-    await this.findOne(id)
+    const comment = await this.findOne(id)
+
+    await this.isBelongs(id, comment.commenterId)
     
     return await this.prisma.comment.delete({where: {id}})
   }

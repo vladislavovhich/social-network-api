@@ -25,7 +25,7 @@ async function bootstrap() {
   app.use(bodyParser.urlencoded({extended: true}))
   app.use(bodyParser.json())
   app.useGlobalInterceptors(new ClassSerializerInterceptor(app.get(Reflector)));
-  
+
   await app.listen(3000);
 }
 bootstrap();

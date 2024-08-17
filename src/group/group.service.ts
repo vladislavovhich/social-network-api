@@ -1,11 +1,13 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { CreateGroupDto } from './dto/create-group.dto';
 import { UpdateGroupDto } from './dto/update-group.dto';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { CategoryService } from 'src/category/category.service';
-import { Group, User, Image } from '@prisma/client';
+import { Group, User, Image, Prisma } from '@prisma/client';
 import { ImageService } from 'src/image/image.service';
 import { GetOneGroupDto } from './dto/get-one-group.dto';
+import { GroupPaginationDto } from './dto/group-pagination.dto';
+import { GroupPaginationResponseDto } from './dto/group-pagination-response.dto';
 
 @Injectable()
 export class GroupService {
@@ -14,6 +16,14 @@ export class GroupService {
     private readonly categoryService: CategoryService,
     private readonly imageService: ImageService
   ) {}
+
+  async isBelongs(groupId: number, userId: number) {
+    const item = await this.findOne(groupId)
+
+    if (item.adminId != userId) {
+      throw new ForbiddenException("You're not admin of the group!")
+    }
+  }
 
   async isSubscribed(groupId: number, userId: number) {
     await this.findOne(groupId)
@@ -78,8 +88,8 @@ export class GroupService {
     })
   }
 
-  async getAllGroups() {
-    const groups = await this.prisma.group.findMany({
+  private getOneGroupParams(): Prisma.GroupFindManyArgs {
+    return {
       include: {
         _count: {
           select: {
@@ -106,9 +116,48 @@ export class GroupService {
           }
         }
       }
+    }
+
+  }
+  async getAllGroups(groupPaginationDto: GroupPaginationDto) {
+    const {title, categories, offset, pageSize} = groupPaginationDto
+    const {include: includeOptions} = this.getOneGroupParams()
+
+    const whereOptions: Prisma.GroupWhereInput = {
+      name: {
+        contains: title
+      },
+      categories: {
+        some: {
+          category: {
+            name: {
+              in: categories,
+              mode: "insensitive"
+            }
+          }
+        }
+      }
+    }
+
+    const groups = await this.prisma.group.findMany({
+      take: pageSize,
+      skip: offset,
+      where: whereOptions,
+      include: includeOptions,
+      orderBy: {
+        subs: {
+          _count: "desc"
+        }
+      }
     })
 
-    return groups.map(group => new GetOneGroupDto(group))
+    const count = await this.prisma.group.count({
+      where: whereOptions
+    })
+
+    const groupsDtos = groups.map(group => new GetOneGroupDto(group))
+
+    return new GroupPaginationResponseDto(groupsDtos, count, groupPaginationDto)
   }
 
   async findOne(id: number) {
@@ -116,34 +165,11 @@ export class GroupService {
   }
 
   async getOneGroup(id: number) {
+    const groupParams = this.getOneGroupParams()
+
     const group = await this.prisma.group.findFirstOrThrow({
       where: {id},
-      include: {
-        _count: {
-          select: {
-            subs: true
-          }
-        },
-        categories: {
-          include: {
-            category: true
-          }
-        },
-        images: {
-          include: {
-            image: true
-          }
-        },
-        admin: {
-          include: {
-            images: {
-              include: {
-                image: true
-              }
-            }
-          }
-        }
-      }
+      include: groupParams.include
     })
 
     return new GetOneGroupDto(group)
@@ -151,8 +177,10 @@ export class GroupService {
 
   async update(id: number, updateGroupDto: UpdateGroupDto) {
     await this.findOne(id)
-
+   
     const {adminId, name, description, file, categories: categoryNames} = updateGroupDto
+
+    await this.isBelongs(id, adminId)
 
     const categories = await this.categoryService.handleCategories(categoryNames, adminId)
     const images: Image[] = []
@@ -176,7 +204,9 @@ export class GroupService {
   }
 
   async remove(id: number) {
-    await this.findOne(id)
+    const group = await this.findOne(id)
+
+    await this.isBelongs(id, group.adminId)
 
     return await this.prisma.group.delete({where: {id}})
   }

@@ -19,6 +19,8 @@ import { CommentModule } from './comment/comment.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { APP_FILTER } from '@nestjs/core';
 import { PrismaErrorFilter } from './common/filters/prisma-error.filter';
+import { BanModule } from './ban/ban.module';
+import { RuleModule } from './rule/rule.module';
 
 @Module({
   imports: [
@@ -58,7 +60,7 @@ import { PrismaErrorFilter } from './common/filters/prisma-error.filter';
     CategoryModule, 
     PostModule, 
     GroupModule, 
-    ViewModule, VoteModule, CommentModule, PrismaModule],
+    ViewModule, VoteModule, CommentModule, PrismaModule, BanModule, RuleModule],
   controllers: [],
   providers: [
     {

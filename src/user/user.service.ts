@@ -5,6 +5,10 @@ import { ImageService } from 'src/image/image.service';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { Image } from '@prisma/client';
 import { UserProfileDto } from './dto/user-profile.dto';
+import { Prisma } from '@prisma/client';
+import { UserPaginationDto } from './dto/user-pagination.dto';
+import { UsersResponseDto } from './dto/users-response.dto';
+import { UserSearchDto } from './dto/user-search.dto';
 
 @Injectable()
 export class UserService {
@@ -13,9 +17,55 @@ export class UserService {
     private readonly prisma: PrismaService
   ) {}
 
-  async findOneProfile(userId: number) {
-    const user = await this.prisma.user.findFirstOrThrow({
-      where: {id: userId},
+  async search(usersPaginationDto: UserPaginationDto) {
+    const {username, birthDate, order, pageSize, offset} = usersPaginationDto
+    const params = this.getUserFindManyArgs()
+
+    const dateParams: Prisma.UserWhereInput = {}
+    
+    if (birthDate != undefined && order != undefined) {
+      switch (order) {
+        case "before": {
+          dateParams.birthDate = {
+            lte: birthDate
+          }
+        }
+        case "after": {
+          dateParams.birthDate = {
+            gte: birthDate
+          }
+        }
+      }
+    } else if (birthDate == undefined && order != undefined || birthDate != undefined && order == undefined) {
+      throw new BadRequestException("When filtering by date you must pass both date and order!")
+    }
+
+    const whereParams: Prisma.UserWhereInput = {
+      username: {
+        contains: username,
+        mode: "insensitive"
+      },
+      ...dateParams
+    }
+    
+    const users = await this.prisma.user.findMany({
+      where: whereParams,
+      select: params.select,
+      skip: offset,
+      take: pageSize
+    })
+
+    const count = await this.prisma.user.count({
+      where: whereParams
+    })
+
+    const userDtos = users.map(user => new UserSearchDto(user))
+
+    return new UsersResponseDto(userDtos, count, usersPaginationDto)
+  }
+
+  private getUserFindManyArgs(): Prisma.UserFindManyArgs {
+    return {
       select: {
         id: true,
         username: true,
@@ -33,9 +83,16 @@ export class UserService {
           }
         }
       }
-    })
+    }
+  }
 
-    console.log(user)
+  async findOneProfile(userId: number) {
+    const params = this.getUserFindManyArgs()
+
+    const user = await this.prisma.user.findFirstOrThrow({
+      where: {id: userId},
+      select: params.select
+    })
 
     return new UserProfileDto(user)
   }

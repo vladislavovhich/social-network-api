@@ -1,18 +1,30 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, UseInterceptors, UploadedFile, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, UseInterceptors, UploadedFile, UseGuards, Query } from '@nestjs/common';
 import { UserService } from './user.service';
 import { UpdateUserDto } from './dto/update-user.dto';
-import { ApiConsumes, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { ApiBadRequestResponse, ApiConsumes, ApiOkResponse, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { multerOptions } from 'src/config/multer.config';
 import { AccessTokenGuard } from 'src/auth/guards/access-token.guard';
 import { User } from '@prisma/client';
 import { GetUser } from 'src/common/decorators/extract-user.decorator';
 import { UserProfileDto } from './dto/user-profile.dto';
+import { UserPaginationDto } from './dto/user-pagination.dto';
+import { UsersResponseDto } from './dto/users-response.dto';
 
 @ApiTags("User")
 @Controller('users')
 export class UserController {
     constructor(private readonly userService: UserService) {}
+
+    @Get("search")
+
+    @ApiOkResponse({type: UsersResponseDto})
+    @ApiBadRequestResponse({description: "Incorrect search input data"})
+
+    searchUsers(@Query() usersPaginationDto: UserPaginationDto) {
+        return this.userService.search(usersPaginationDto)
+    }
+
 
     @Get(':id/profile')
 

@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, UseInterceptors, UploadedFile, Put } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, UseInterceptors, UploadedFile, Put, Query } from '@nestjs/common';
 import { GroupService } from './group.service';
 import { CreateGroupDto } from './dto/create-group.dto';
 import { UpdateGroupDto } from './dto/update-group.dto';
@@ -9,6 +9,8 @@ import { multerOptions } from 'src/config/multer.config';
 import { GetUser } from 'src/common/decorators/extract-user.decorator';
 import { GetOneGroupDto } from './dto/get-one-group.dto';
 import { User } from '@prisma/client';
+import { GroupPaginationDto } from './dto/group-pagination.dto';
+import { GroupPaginationResponseDto } from './dto/group-pagination-response.dto';
 
 @ApiTags('Group')
 @Controller('groups')
@@ -59,9 +61,9 @@ export class GroupController {
   }
 
   @Get()
-  @ApiResponse({status: 200, type: [GetOneGroupDto], description: "List of Groups"})
-  findAll() {
-    return this.groupService.getAllGroups();
+  @ApiResponse({status: 200, type: GroupPaginationResponseDto, description: "List of Groups"})
+  findAll(@Query() groupPaginationDto: GroupPaginationDto) {
+    return this.groupService.getAllGroups(groupPaginationDto);
   }
 
   @Get(':id')

@@ -5,7 +5,7 @@ export class GetCategoryDto {
     id: number
     
     @ApiProperty()
-    name: number
+    name: string
 
     constructor(category: any) {
         this.id = category.id

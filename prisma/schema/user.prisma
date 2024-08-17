@@ -16,6 +16,8 @@ model User {
     allVotes       Vote[]
     tags           Tag[]
     categories     Category[]
+    moderatedGroups GroupModerator[]
+    groupsBannedAt GroupBan[]
 
     createdAt   DateTime @default(now())
     updatedAt   DateTime @updatedAt

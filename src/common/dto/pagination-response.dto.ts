@@ -17,7 +17,7 @@ export class PaginationResponseDto<T> {
 
         const {offset, page, pageSize} = paginationDto
 
-        if (count > 0 && count - page * pageSize >= 0) {
+        if (count > 0 && count - page * pageSize > 0) {
             this.nextPage = page + 1
         }
 

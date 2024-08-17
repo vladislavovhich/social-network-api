@@ -6,10 +6,13 @@ model Group {
     admin User @relation(fields: [adminId], references: [id])
     adminId Int
 
+    moderators GroupModerator[]
     posts Post[]
     subs GroupSub[]
     categories GroupCategory[]
     images GroupImage[]
+    rules GroupRule[]
+    banned GroupBan[]
 
     createdAt   DateTime @default(now())
     updatedAt   DateTime @updatedAt

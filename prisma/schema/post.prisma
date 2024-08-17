@@ -5,6 +5,8 @@ model Post {
     publisher   User @relation(fields: [publisherId], references: [id])
     publisherId Int
 
+    isPublished Boolean @default(false)
+
     group   Group @relation(fields: [groupId], references: [id])
     groupId Int
 

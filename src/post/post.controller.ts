@@ -13,9 +13,11 @@ import { User } from '@prisma/client';
 import { VotePostDto } from './dto/vote-post.dto';
 import { ViewOperationDto } from 'src/view/dto/view-operation.dto';
 import { Response } from 'express';
-import { PaginationDto } from 'src/common/dto/pagination.dto';
 import { PostPaginationResponseDto } from './dto/post-pagination-response.dto';
 import { PostPaginationDto } from './dto/post-pagination.dto';
+import { IsPostPublished } from './decorators/post-published.decorator';
+import { PostPublishedGuard } from './guards/post-published.guard';
+import { PaginationDto } from 'src/common/dto/pagination.dto';
 
 @ApiTags("Post")
 @Controller('/')
@@ -58,10 +60,18 @@ export class PostController {
     return this.postService.getGroupPost(post.id)
   }
 
+  @Get('/groups/:id/posts-not-published')
+
+  @ApiOkResponse({type: PostPaginationResponseDto})
+  @ApiNotFoundResponse({description: "Group not found"})
+
+  getNotPublishedPosts(@Param('id') id: string, @Query() paginationDto: PaginationDto) {
+    return this.postService.getNotPublishedPosts(+id, paginationDto)
+  }
 
   @Get('/groups/:id/posts')
 
-  @ApiOkResponse({type: [GetPostDto]})
+  @ApiOkResponse({type: PostPaginationResponseDto})
   @ApiNotFoundResponse({description: "Group not found"})
 
   getGroupPosts(@Param('id') id: string, @Query() paginationDto: PostPaginationDto) {
@@ -72,9 +82,23 @@ export class PostController {
 
   @ApiOkResponse({type: GetPostDto, description: "Post"})
   @ApiNotFoundResponse({description: "Post not found"})
+  @ApiBadRequestResponse({description: "Post isn't published yet"})
+
+  @IsPostPublished("id")
+  @UseGuards(PostPublishedGuard)
 
   findOne(@Param('id') id: string) {
     return this.postService.getGroupPost(+id);
+  }
+
+  @Get('/posts/:id/publish')
+
+  @ApiOkResponse({type: GetPostDto, description: "Post"})
+  @ApiNotFoundResponse({description: "Post not found"})
+  @ApiBadRequestResponse({description: "Post is already published"})
+
+  publishPost(@Param('id') id: string) {
+    return this.postService.publishPost(+id);
   }
 
   @Put('/posts/:id/upvote')
@@ -82,6 +106,9 @@ export class PostController {
   @ApiOkResponse({type: GetPostDto, description: "Upvoted Post"})
   @ApiNotFoundResponse({description: "Post not found"})
   @ApiResponse({status: 401, description: "Not authorized"})
+
+  @IsPostPublished("id")
+  @UseGuards(PostPublishedGuard)
 
   @UseGuards(AccessTokenGuard)
 
@@ -97,6 +124,9 @@ export class PostController {
   @ApiNotFoundResponse({description: "Post not found"})
   @ApiResponse({status: 401, description: "Not authorized"})
 
+  @IsPostPublished("id")
+  @UseGuards(PostPublishedGuard)
+
   @UseGuards(AccessTokenGuard)
 
   donwvotePost(@Param('id') id: string, @GetUser() user: User) {
@@ -110,6 +140,9 @@ export class PostController {
   @ApiOkResponse({description: "Post marked as viewed"})
   @ApiNotFoundResponse({description: "Post not found"})
   @ApiResponse({status: 401, description: "Not authorized"})
+
+  @IsPostPublished("id")
+  @UseGuards(PostPublishedGuard)
 
   @UseGuards(AccessTokenGuard)
 
@@ -129,6 +162,9 @@ export class PostController {
   @ApiBadRequestResponse({description: "Incorrect input data"})
   @ApiResponse({status: 401, description: "Not authorized"})
   @ApiConsumes("multipart/form-data")
+
+  @IsPostPublished("id")
+  @UseGuards(PostPublishedGuard)
 
   @UseGuards(AccessTokenGuard)
   @UseInterceptors(FilesInterceptor('files', 10, multerOptions))

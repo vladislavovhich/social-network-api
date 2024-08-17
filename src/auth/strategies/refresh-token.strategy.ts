@@ -21,7 +21,7 @@ export class RefreshTokenStrategy extends PassportStrategy(Strategy, 'jwt-refres
       secretOrKey: secret,
     });
   }
-
+ 
   async validate(payload: JwtPayload): Promise<User> {
     return await this.userService.findOne(payload.userId)
   }

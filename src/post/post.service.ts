@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { CreatePostDto } from './dto/create-post.dto';
 import { UpdatePostDto } from './dto/update-post.dto';
 import { DataSource, Repository } from 'typeorm';
@@ -27,6 +27,31 @@ export class PostService {
     private readonly prisma: PrismaService,
     private readonly groupService: GroupService
   ) {}
+
+  async publishPost(postId: number) {
+    const post = await this.findOne(postId)
+
+    if (post.isPublished) {
+      throw new BadRequestException("You've already published the post!")
+    }
+
+    await this.prisma.post.update({
+      where: {id: postId},
+      data: {
+        isPublished: true
+      }
+    })
+
+    return await this.getGroupPost(postId)
+  }
+
+  async isBelongs(postId: number, userId: number) {
+    const item = await this.findOne(postId)
+
+    if (item.publisherId != userId) {
+      throw new ForbiddenException("You're not publisher of the post!")
+    }
+  }
 
   async create(createPostDto: CreatePostDto) {
     const {text, groupId, publisherId, tags: tagNames, files} = createPostDto
@@ -64,7 +89,9 @@ export class PostService {
     const todayStart = startOfDay(today)
     const todayEnd = endOfDay(today)
 
+    
     const posts = await this.findMany({
+      isPublished: true,
       createdAt: {
         gte: todayStart,
         lte: todayEnd
@@ -75,7 +102,8 @@ export class PostService {
             userId: userId
           }
         }
-      }
+      },
+      
     }, [
       { createdAt: "desc" }
     ], paginationDto)
@@ -85,7 +113,9 @@ export class PostService {
 
   async getGroupPost(postId: number) {
     const post = await this.prisma.post.findFirst({
-      where: {id: postId},
+      where: {
+        id: postId
+      },
       select: this.getSelectParams()
     })
 
@@ -115,6 +145,7 @@ export class PostService {
     const {text, publisherId, tags: tagNames, files} = updatePostDto
 
     await this.findOne(id)
+    await this.isBelongs(id, publisherId)
 
     const images: Image[] = []
     const tagsRaw = await this.tagService.handleTags(tagNames, publisherId)
@@ -269,7 +300,7 @@ export class PostService {
   async findMany(
     whereOptions: Prisma.PostWhereInput = {}, 
     orderByOptions: Prisma.PostOrderByWithRelationInput[] = [],
-    paginationOptions: PostPaginationDto
+    paginationOptions: PostPaginationDto | PaginationDto
   ) {
     const {offset, page, pageSize} = paginationOptions
 
@@ -292,9 +323,20 @@ export class PostService {
   }
 
   async remove(id: number) {
-    await this.findOne(id)
+    const post = await this.findOne(id)
+
+    await this.isBelongs(id, post.publisherId)
 
     return await this.prisma.post.delete({where: {id}})
+  }
+
+  async getNotPublishedPosts(groupId: number, paginationDto: PaginationDto) {
+    return await this.findMany({
+      groupId,
+      isPublished: false
+    }, [
+      {createdAt: "desc"}
+    ], paginationDto)
   }
 
   async getGroupPosts(groupId: number, paginationDto: PostPaginationDto) {
@@ -316,6 +358,7 @@ export class PostService {
           LEFT JOIN "Vote" ON "PostVote"."voteId" = "Vote".id
           WHERE "Vote"."createdAt" BETWEEN ${hourStart} AND ${hourEnd}
           AND "Post"."groupId" = ${groupId}
+          AND "Post"."isPublished" = true
           GROUP BY "Post".id
           ORDER BY "votesSum" DESC
           LIMIT ${pageSize}
@@ -334,7 +377,7 @@ export class PostService {
       }
       case "controversial": {
         const posts = await this.findMany({
-          groupId, ...dateFilter
+          groupId, ...dateFilter, isPublished: true
         }, [
           {
             comments: {
@@ -356,6 +399,7 @@ export class PostService {
           LEFT JOIN "Vote" ON "PostVote"."voteId" = "Vote".id
           WHERE "Post"."createdAt" BETWEEN ${dateFilter.createdAt.gte} AND ${dateFilter.createdAt.lte}
           AND "Post"."groupId" = ${groupId}
+          AND "Post"."isPublished" = true
           GROUP BY "Post".id
           ORDER BY "votesSum" DESC
           LIMIT ${pageSize}
@@ -373,7 +417,7 @@ export class PostService {
         return posts
         }
       default: 
-        return await this.findMany({ groupId, ...dateFilter}, [{ createdAt: "desc" }], paginationDto)
+        return await this.findMany({ groupId, ...dateFilter, isPublished: true}, [{ createdAt: "desc" }], paginationDto)
     }
   }
 

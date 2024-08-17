@@ -15,3 +15,10 @@ export enum PostFilterEnum {
     HOT = "hot",
     NOW = "now"
 }
+
+export type BelongsFunctionType = (itemId: number, userId: number) => Promise<void>
+
+export enum DateOrderEnum {
+    before = "before",
+    after = "after"
+}
