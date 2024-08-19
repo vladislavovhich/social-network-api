@@ -9,18 +9,20 @@ import { User } from '@prisma/client';
 import { VoteCommentDto } from './dto/vote-comment.dto';
 import { CommentTreeDto } from './dto/comment-tree.dto';
 import { GetCommentDto } from './dto/get-comment.dto';
-import { GroupId } from 'src/group/decorators/group-id.decorator';
-import { PassUserGuard } from 'src/group/guards/pass-user.guard';
+import { ItemId } from 'src/common/decorators/item-id.decorator';
 import { PassOnly } from 'src/group/decorators/pass-type.decorator';
 import { UserPassEnum } from 'src/group/group.types';
 import { Response } from 'express';
+import { PassUserCommentGuard } from './guards/pass-user-comment.guard';
+import { PassUserPostGuard } from 'src/post/guards/pass-user-post.guard';
+import { CheckOwnership } from 'src/post/decorators/check-ownership.decorator';
 
 @ApiTags('Comment')
 @Controller('/')
 export class CommentController {
   constructor(private readonly commentService: CommentService) {}
 
-  @Put('/groups/:groupId/comments/:id/upvote')
+  @Put('/comments/:id/upvote')
 
   @ApiOkResponse({description: "Comment upvoted"})
   @ApiUnauthorizedResponse({description: "Not authorized"})
@@ -28,14 +30,11 @@ export class CommentController {
   @ApiForbiddenResponse({description: "Access denied"})
   @ApiNotFoundResponse({description: "Comment not found"})
 
-  @GroupId("groupId")
-  @UseGuards(PassUserGuard)
-  
+  @UseGuards(PassUserCommentGuard)
   @UseGuards(AccessTokenGuard)
 
   async upvoteComment(
-    @Param('id', ParseIntPipe) id: number, 
-    @Param('groupId', ParseIntPipe) groupId: number,
+    @Param('id', ParseIntPipe) id: number,
     @GetUser() user: User,
     @Res() res: Response
   ) {
@@ -47,7 +46,7 @@ export class CommentController {
   }
 
 
-  @Put('/groups/:groupId/comments/:id/downvote')
+  @Put('/comments/:id/downvote')
 
   @ApiOkResponse({description: "Comment downvoted"})
   @ApiUnauthorizedResponse({description: "Not authorized"})
@@ -55,14 +54,11 @@ export class CommentController {
   @ApiForbiddenResponse({description: "Access denied"})
   @ApiNotFoundResponse({description: "Comment not found"})
 
-  @GroupId("groupId")
-  @UseGuards(PassUserGuard)
-
+  @UseGuards(PassUserCommentGuard)
   @UseGuards(AccessTokenGuard)
 
   async downwoteComment(
     @Param('id', ParseIntPipe) id: number, 
-    @Param('groupId', ParseIntPipe) groupId: number,
     @GetUser() user: User,
     @Res() res: Response
   ) {
@@ -74,7 +70,7 @@ export class CommentController {
   }
 
 
-  @Post('/groups/:groupId/posts/:postId/comments')
+  @Post('/posts/:postId/comments')
 
   @ApiCreatedResponse({description: "Comment added", type: GetCommentDto})
   @ApiUnauthorizedResponse({description: "Not authorized"})
@@ -82,14 +78,12 @@ export class CommentController {
   @ApiForbiddenResponse({description: "Access denied"})
   @ApiNotFoundResponse({description: "Post not found"})
 
-  @GroupId("groupId")
-  @UseGuards(PassUserGuard)
-
+  @ItemId("postId")
+  @UseGuards(PassUserPostGuard)
   @UseGuards(AccessTokenGuard)
 
   async addPostComment(
-    @Param('postId', ParseIntPipe) postId: number,
-    @Param('groupId', ParseIntPipe) groupId: number, 
+    @Param('postId', ParseIntPipe) postId: number, 
     @Body() createCommentDto: CreateCommentDto, 
     @GetUser() user: User
   ) {
@@ -115,7 +109,7 @@ export class CommentController {
   }
 
 
-  @Post('/groups/:groupId/posts/:postId/comments/:commentId')
+  @Post('/posts/:postId/comments/:commentId')
 
   @ApiOkResponse({description: "Comment replied", type: GetCommentDto})
   @ApiUnauthorizedResponse({description: "Not authorized"})
@@ -123,15 +117,13 @@ export class CommentController {
   @ApiForbiddenResponse({description: "Access denied"})
   @ApiNotFoundResponse({description: "Comment or Post not found"})
 
-  @GroupId("groupId")
-  @UseGuards(PassUserGuard)
-
+  @ItemId("commentId")
+  @UseGuards(PassUserCommentGuard)
   @UseGuards(AccessTokenGuard)
 
   async addReplyToComment(
     @Param('postId', ParseIntPipe) postId: number, 
     @Param('commentId', ParseIntPipe) commentId: number, 
-    @Param('groupId', ParseIntPipe) groupId: number, 
     @Body() createCommentDto: CreateCommentDto, 
     @GetUser() user: User
   ) {
@@ -144,7 +136,7 @@ export class CommentController {
     return new GetCommentDto(comment)
   }
 
-  @Patch('/groups/:groupId/comments/:id')
+  @Patch('/comments/:id')
 
   @ApiOkResponse({description: "Comment updated", type: GetCommentDto})
   @ApiUnauthorizedResponse({description: "Not authorized"})
@@ -152,14 +144,12 @@ export class CommentController {
   @ApiForbiddenResponse({description: "Access denied"})
   @ApiNotFoundResponse({description: "Comment not found"})
 
-  @GroupId("groupId")
-  @UseGuards(PassUserGuard)
-
+  @CheckOwnership(true)
+  @UseGuards(PassUserCommentGuard)
   @UseGuards(AccessTokenGuard)
   
   async update(
     @Param('id', ParseIntPipe) id: number,
-    @Param('groupId', ParseIntPipe) groupId: number,
     @Body() updateCommentDto: UpdateCommentDto
   ) {
     const comment = await this.commentService.update(id, updateCommentDto);
@@ -175,10 +165,9 @@ export class CommentController {
   @ApiForbiddenResponse({description: "Access denied"})
   @ApiOkResponse({description: "Comment deleted"})
 
-  @GroupId("groupId")
+  @CheckOwnership(true)
   @PassOnly(UserPassEnum.AdminAndModerators)
-  @UseGuards(PassUserGuard)
-
+  @UseGuards(PassUserCommentGuard)
   @UseGuards(AccessTokenGuard)
 
   async remove(@Param('id', ParseIntPipe) id: number, @Res() res: Response) {

@@ -1,0 +1,12 @@
+model Friend {
+    id          Int      @id @default(autoincrement())
+
+    userFirst User @relation(fields: [userFirstId], references: [id], name: "user_first_friend")
+    userFirstId Int
+
+    userSecond User @relation(fields: [userSecondId], references: [id], name: "user_second_friend")
+    userSecondId Int
+
+    createdAt   DateTime @default(now())
+    updatedAt   DateTime @updatedAt
+}

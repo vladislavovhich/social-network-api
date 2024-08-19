@@ -17,14 +17,6 @@ export class CommentService {
     private readonly prisma: PrismaService
   ) {}
 
-  async isBelongs(commentId: number, userId: number) {
-    const item = await this.findOne(commentId)
-
-    if (item.commenterId != userId) {
-      throw new ForbiddenException("You can't edit this comment!")
-    }
-  }
-  
   async create(createCommentDto: CreateCommentDto) {
     const {text, commenterId, commentId, postId} = createCommentDto
 
@@ -172,15 +164,18 @@ export class CommentService {
   }
 
   async findOne(id: number) {
-    return await this.prisma.comment.findFirstOrThrow({where: {id}})
+    return await this.prisma.comment.findFirstOrThrow({
+      where: {id},
+      include: {
+        post: true
+      }
+    })
   }
 
   async update(id: number, updateCommentDto: UpdateCommentDto) {
     await this.findOne(id)
 
     const {text, commenterId, commentId, postId} = updateCommentDto
-
-    await this.isBelongs(id, commenterId)
 
     const comment = await this.prisma.comment.update({
       where: {id},
@@ -195,8 +190,6 @@ export class CommentService {
   async remove(id: number) {
     const comment = await this.findOne(id)
 
-    await this.isBelongs(id, comment.commenterId)
-    
     return await this.prisma.comment.delete({where: {id}})
   }
 }

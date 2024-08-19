@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import { BadRequestException, forwardRef, Inject, Injectable } from '@nestjs/common';
 import { CreateBanDto, CreateBanParamDto } from './dto/create-ban.dto';
 import { UpdateBanDto } from './dto/update-ban.dto';
 import { PrismaService } from 'src/prisma/prisma.service';
@@ -14,6 +14,7 @@ export class BanService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly userService: UserService,
+    @Inject(forwardRef(() => GroupService))
     private readonly groupService: GroupService
   ) {}
 

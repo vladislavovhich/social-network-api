@@ -7,6 +7,12 @@ model User {
     isVerified  Boolean @default(false)
     birthDate   DateTime
 
+    friendRequestsToMe FriendRequest[] @relation(name: "user_to_relation")
+    friendRequestsFromMe FriendRequest[] @relation(name: "user_from_relation")
+    
+    friends1 Friend[] @relation(name: "user_first_friend")
+    friends2 Friend[] @relation(name: "user_second_friend")
+
     groups GroupSub[]
     images UserImage[]
     viewedPosts View[]

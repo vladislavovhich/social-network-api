@@ -1,4 +1,4 @@
-import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ForbiddenException, forwardRef, Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { CreateGroupDto } from './dto/create-group.dto';
 import { UpdateGroupDto } from './dto/update-group.dto';
 import { PrismaService } from 'src/prisma/prisma.service';
@@ -10,15 +10,57 @@ import { GroupPaginationDto } from './dto/group-pagination.dto';
 import { GroupPaginationResponseDto } from './dto/group-pagination-response.dto';
 import { ModeratorOpDto } from './dto/moderator-op.dto';
 import { UserInfoDto } from 'src/user/dto/user-info.dto';
+import { BanService } from 'src/ban/ban.service';
+import { UserPassEnum } from './group.types';
 
 @Injectable()
 export class GroupService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly categoryService: CategoryService,
-    private readonly imageService: ImageService
+    private readonly imageService: ImageService,
+    @Inject(forwardRef(() => BanService))
+    private readonly banService: BanService
   ) {}
 
+  async isActionAllowed(groupId: number, userId: number, passType: UserPassEnum, throwExp: boolean = true) {
+    const isAdmin = await this.isAdmin(groupId, userId)
+    const isModerator = await this.isModerator(userId, groupId)
+
+    const isBanned = await this.banService.isBanned(userId, groupId)
+
+    if (isBanned) {
+      throw new ForbiddenException("You're banned, so you can't access it")
+    }
+
+    if (passType) {
+      switch (passType) {
+        case UserPassEnum.Admin: {
+          if (!isAdmin && throwExp) {
+            throw new ForbiddenException("You aren't admin, so you can't do this action!")
+          } else {
+            return false
+          }
+        }
+
+        case UserPassEnum.AdminAndModerators: {
+          if (!isAdmin && (isAdmin == isModerator) && throwExp) {
+            throw new ForbiddenException("You are neither admin nor moderator, so you can't do this action!")
+          } else {
+            return false
+          }
+        }
+
+        case UserPassEnum.Moderators: {
+          if (!isModerator && throwExp) {
+            throw new ForbiddenException("You aren't moderator, so you can't do this action!")
+          }
+        }
+      }
+    }
+
+    return isAdmin || isModerator
+  }
 
   async isModerator(userId: number, groupId: number) {
     await this.prisma.user.findFirstOrThrow({where: {id: userId}})

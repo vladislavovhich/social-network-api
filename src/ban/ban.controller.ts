@@ -6,7 +6,7 @@ import { ApiBadRequestResponse, ApiForbiddenResponse, ApiNotFoundResponse, ApiOk
 import { AccessTokenGuard } from 'src/auth/guards/access-token.guard';
 import { PaginationDto } from 'src/common/dto/pagination.dto';
 import { BannedUsersResponseDto } from './dto/banned-users-response.dto';
-import { GroupId } from 'src/group/decorators/group-id.decorator';
+import { ItemId } from 'src/common/decorators/item-id.decorator';
 import { PassOnly } from 'src/group/decorators/pass-type.decorator';
 import { UserPassEnum } from 'src/group/group.types';
 import { PassUserGuard } from 'src/group/guards/pass-user.guard';
@@ -26,7 +26,7 @@ export class BanController {
   @ApiResponse({status: 401, description: "Not authorized"})
 
   @PassOnly(UserPassEnum.Admin)
-  @GroupId("groupId")
+  @ItemId("groupId")
   @UseGuards(PassUserGuard)
 
   @UseGuards(AccessTokenGuard)
@@ -48,7 +48,7 @@ export class BanController {
   @ApiResponse({status: 401, description: "Not authorized"})
 
   @PassOnly(UserPassEnum.Admin)
-  @GroupId("groupId")
+  @ItemId("groupId")
   @UseGuards(PassUserGuard)
 
   @UseGuards(AccessTokenGuard)
@@ -65,7 +65,7 @@ export class BanController {
   @ApiResponse({status: 401, description: "Not authorized"})
 
   @PassOnly(UserPassEnum.AdminAndModerators)
-  @GroupId("groupId")
+  @ItemId("groupId")
   @UseGuards(PassUserGuard)
 
   @UseGuards(AccessTokenGuard)

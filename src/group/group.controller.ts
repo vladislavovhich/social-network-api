@@ -16,7 +16,7 @@ import { UserInfoDto } from 'src/user/dto/user-info.dto';
 import { PassOnly } from './decorators/pass-type.decorator';
 import { UserPassEnum } from './group.types';
 import { PassUserGuard } from './guards/pass-user.guard';
-import { GroupId } from './decorators/group-id.decorator';
+import { ItemId } from 'src/common/decorators/item-id.decorator';
 
 @ApiTags('Group')
 @Controller('groups')
@@ -44,7 +44,7 @@ export class GroupController {
   @ApiUnauthorizedResponse({description: "Not authorized"})
 
   @PassOnly(UserPassEnum.Admin)
-  @GroupId("groupId")
+  @ItemId("groupId")
   @UseGuards(PassUserGuard)
 
   @UseGuards(AccessTokenGuard)
@@ -62,7 +62,7 @@ export class GroupController {
   @ApiUnauthorizedResponse({description: "Not authorized"})
 
   @PassOnly(UserPassEnum.Admin)
-  @GroupId("groupId")
+  @ItemId("groupId")
   @UseGuards(PassUserGuard)
 
   @UseGuards(AccessTokenGuard)
@@ -152,7 +152,6 @@ export class GroupController {
   @ApiForbiddenResponse({description: "Group does not belong to the user"})
 
   @PassOnly(UserPassEnum.Admin)
-  @GroupId("id")
   @UseGuards(PassUserGuard)
 
   @UseGuards(AccessTokenGuard)
@@ -180,7 +179,6 @@ export class GroupController {
   @ApiUnauthorizedResponse({description: "Not authorized"})
 
   @PassOnly(UserPassEnum.Admin)
-  @GroupId("groupId")
   @UseGuards(PassUserGuard)
 
   @UseGuards(AccessTokenGuard)

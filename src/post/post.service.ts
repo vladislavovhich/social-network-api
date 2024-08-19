@@ -17,6 +17,7 @@ import { PaginationDto } from 'src/common/dto/pagination.dto';
 import { PostPaginationResponseDto } from './dto/post-pagination-response.dto';
 import { DateFilterType, PostFilterType } from 'src/common/types';
 import { PostPaginationDto } from './dto/post-pagination.dto';
+import { PostPaginationSearchDto } from './dto/post-pagination-search.dto';
 
 @Injectable()
 export class PostService {
@@ -28,6 +29,29 @@ export class PostService {
     private readonly groupService: GroupService
   ) {}
 
+  async searchPosts(searchDto: PostPaginationSearchDto, groupId: number = undefined) {
+    const {text, tags, publisherId} = searchDto
+
+    return await this.findMany({
+      groupId,
+      publisherId,
+      text: {
+        contains: text,
+        mode: "insensitive"
+      },
+      tags: {
+        some: {
+          tag: {
+            name: {
+              in: tags,
+              mode: "insensitive"
+            }
+          }
+        }
+      }
+    }, [], searchDto)
+  }
+
   async publishPost(postId: number) {
     const post = await this.findOne(postId)
 
@@ -38,7 +62,7 @@ export class PostService {
     await this.prisma.post.update({
       where: {id: postId},
       data: {
-        isPublished: true
+        isPublished: true,
       }
     })
 
@@ -84,18 +108,9 @@ export class PostService {
     })
   }
 
-  async getFeedPosts(userId: number, paginationDto: PostPaginationDto) {
-    const today = new Date()
-    const todayStart = startOfDay(today)
-    const todayEnd = endOfDay(today)
-
-    
+  async getFeedPosts(userId: number, paginationDto: PaginationDto) {
     const posts = await this.findMany({
       isPublished: true,
-      createdAt: {
-        gte: todayStart,
-        lte: todayEnd
-      },
       group: {
         subs: {
           some: {
@@ -103,7 +118,6 @@ export class PostService {
           }
         }
       },
-      
     }, [
       { createdAt: "desc" }
     ], paginationDto)
@@ -145,7 +159,6 @@ export class PostService {
     const {text, publisherId, tags: tagNames, files} = updatePostDto
 
     await this.findOne(id)
-    await this.isBelongs(id, publisherId)
 
     const images: Image[] = []
     const tagsRaw = await this.tagService.handleTags(tagNames, publisherId)
@@ -300,12 +313,13 @@ export class PostService {
   async findMany(
     whereOptions: Prisma.PostWhereInput = {}, 
     orderByOptions: Prisma.PostOrderByWithRelationInput[] = [],
-    paginationOptions: PostPaginationDto | PaginationDto
+    paginationOptions: PostPaginationDto | PaginationDto,
+    count: number = 0
   ) {
     const {offset, page, pageSize} = paginationOptions
 
     const postsMany = await this.prisma.post.findMany({
-      skip: offset,
+      skip: count == 0 ? offset: 0,
       take: pageSize,
       where: whereOptions,
       select: this.getSelectParams(),
@@ -314,18 +328,16 @@ export class PostService {
 
     const posts = await this.handlePostsWithVotes(postsMany)
 
-    const postCount = await this.prisma.post.count({
+    const postCount = count == 0 ? await this.prisma.post.count({
       where: whereOptions,
       orderBy: orderByOptions
-    })
+    }) : count
 
     return new PostPaginationResponseDto(posts, postCount, paginationOptions)
   }
 
   async remove(id: number) {
     const post = await this.findOne(id)
-
-    await this.isBelongs(id, post.publisherId)
 
     return await this.prisma.post.delete({where: {id}})
   }
@@ -342,8 +354,8 @@ export class PostService {
   async getGroupPosts(groupId: number, paginationDto: PostPaginationDto) {
     await this.groupService.findOne(groupId)
 
-    const {post, pageSize, offset} = paginationDto
-    const dateFilter = this.getFilterParams(paginationDto.date)
+    const {post, pageSize, offset, date} = paginationDto
+    const dateFilter = this.getFilterParams(date)
 
     switch (post) {
       case "hot": {
@@ -365,11 +377,24 @@ export class PostService {
           OFFSET ${offset};
         `
 
+        const count = await this.prisma.$queryRaw<{count: number}[]>`
+          SELECT COUNT(*) FROM (
+            SELECT "Post".id, COALESCE(SUM("Vote".value), 0) as "votesSum"
+            FROM "Post"
+            LEFT JOIN "PostVote" ON "Post".id = "PostVote"."postId"
+            LEFT JOIN "Vote" ON "PostVote"."voteId" = "Vote".id
+            WHERE "Vote"."createdAt" BETWEEN ${hourStart} AND ${hourEnd}
+            AND "Post"."groupId" = ${groupId}
+            AND "Post"."isPublished" = true
+            GROUP BY "Post".id
+            ORDER BY "votesSum" DESC
+        )`
+
         const posts = await this.findMany({
           id: {
             in: result.map(res => res.id)
           }
-        }, [], paginationDto)
+        }, [], paginationDto, Number(count[0].count))
 
         posts.items.sort((p1, p2) => p2.votes - p1.votes)
 
@@ -406,11 +431,24 @@ export class PostService {
           OFFSET ${offset};
         `
 
+        const count = await this.prisma.$queryRaw<{count: number}[]>`
+          SELECT COUNT(*) FROM (
+            SELECT "Post".id, COALESCE(SUM("Vote".value), 0) as "votesSum"
+            FROM "Post"
+            LEFT JOIN "PostVote" ON "Post".id = "PostVote"."postId"
+            LEFT JOIN "Vote" ON "PostVote"."voteId" = "Vote".id
+            WHERE "Post"."createdAt" BETWEEN ${dateFilter.createdAt.gte} AND ${dateFilter.createdAt.lte}
+            AND "Post"."groupId" = ${groupId}
+            AND "Post"."isPublished" = true
+            GROUP BY "Post".id
+            ORDER BY "votesSum" DESC
+        )`
+
         const posts = await this.findMany({
           id: {
             in: result.map(res => res.id)
           }
-        }, [], paginationDto)
+        }, [], paginationDto, Number(count[0].count))
 
         posts.items.sort((p1, p2) => p2.votes - p1.votes)
 

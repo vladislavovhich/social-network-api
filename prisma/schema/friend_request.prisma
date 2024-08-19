@@ -1,0 +1,14 @@
+model FriendRequest {
+    id          Int      @id @default(autoincrement())
+    text String
+    isConfirmed Boolean?
+
+    userTo User @relation(fields: [userToId], references: [id], name: "user_to_relation")
+    userToId Int
+
+    userFrom User @relation(fields: [userFromId], references: [id], name: "user_from_relation")
+    userFromId Int
+
+    createdAt   DateTime @default(now())
+    updatedAt   DateTime @updatedAt
+}

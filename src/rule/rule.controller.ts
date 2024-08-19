@@ -4,7 +4,7 @@ import { CreateRuleDto } from './dto/create-rule.dto';
 import { UpdateRuleDto } from './dto/update-rule.dto';
 import { ApiBadRequestResponse, ApiForbiddenResponse, ApiNotFoundResponse, ApiOkResponse, ApiResponse, ApiTags, ApiUnauthorizedResponse } from '@nestjs/swagger';
 import { GetRuleDto } from './dto/get-rule.dto';
-import { GroupId } from 'src/group/decorators/group-id.decorator';
+import { ItemId } from 'src/common/decorators/item-id.decorator';
 import { PassUserGuard } from 'src/group/guards/pass-user.guard';
 import { PassOnly } from 'src/group/decorators/pass-type.decorator';
 import { UserPassEnum } from 'src/group/group.types';
@@ -37,7 +37,7 @@ export class RuleController {
   @ApiNotFoundResponse({description: "Group not found"})
   @ApiForbiddenResponse({description: "Access denied"})
   
-  @GroupId("groupId")
+  @ItemId("groupId")
   @PassOnly(UserPassEnum.Admin)
   @UseGuards(PassUserGuard)
   @UseGuards(AccessTokenGuard)
@@ -60,7 +60,7 @@ export class RuleController {
   @ApiUnauthorizedResponse({description: "Not authorized"})
   @ApiNotFoundResponse({description: "Rule not found"})
 
-  @GroupId("groupId")
+  @ItemId("groupId")
   @PassOnly(UserPassEnum.Admin)
   @UseGuards(PassUserGuard)
   @UseGuards(AccessTokenGuard)
@@ -82,7 +82,7 @@ export class RuleController {
   @ApiResponse({description: "Not authorized", status: 401})
   @ApiNotFoundResponse({description: "Rule not found"})
 
-  @GroupId("groupId")
+  @ItemId("groupId")
   @PassOnly(UserPassEnum.Admin)
   @UseGuards(PassUserGuard)
   @UseGuards(AccessTokenGuard)
