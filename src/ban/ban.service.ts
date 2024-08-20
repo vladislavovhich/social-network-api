@@ -18,12 +18,16 @@ export class BanService {
     private readonly groupService: GroupService
   ) {}
 
-  async ban(createBanDto: CreateBanDto) {
+  async ban(createBanDto: CreateBanDto, bannerId: number) {
     const {reason, userId, groupId, time} = createBanDto
 
     await this.userService.findOne(userId)
     await this.groupService.findOne(groupId)
 
+    if (bannerId == userId) {
+      throw new BadRequestException("You can't ban yourself!")
+    }
+    
     const isBanned = await this.isBanned(userId, groupId)
     const isAdmin = await this.groupService.isAdmin(groupId, userId)
 

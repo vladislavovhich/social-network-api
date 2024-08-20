@@ -10,6 +10,8 @@ import { ItemId } from 'src/common/decorators/item-id.decorator';
 import { PassOnly } from 'src/group/decorators/pass-type.decorator';
 import { UserPassEnum } from 'src/group/group.types';
 import { PassUserGuard } from 'src/group/guards/pass-user.guard';
+import { User } from '@prisma/client';
+import { GetUser } from 'src/common/decorators/extract-user.decorator';
 
 @ApiTags("Ban")
 @Controller('/')
@@ -31,11 +33,15 @@ export class BanController {
 
   @UseGuards(AccessTokenGuard)
   
-  ban(@Param() createBanParamDto: CreateBanParamDto, @Body() createBanDto: CreateBanDto) {
+  ban(
+    @Param() createBanParamDto: CreateBanParamDto, 
+    @Body() createBanDto: CreateBanDto,
+    @GetUser() user: User
+  ) {
     createBanDto.groupId = createBanParamDto.groupId
     createBanDto.userId = createBanParamDto.userId
 
-    return this.banService.ban(createBanDto)
+    return this.banService.ban(createBanDto, user.id)
   }
 
 

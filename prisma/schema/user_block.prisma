@@ -1,0 +1,9 @@
+model UserBlock {
+    id          Int      @id @default(autoincrement())
+
+    user      User    @relation(fields: [userId], references: [id], name: "me_blocked_users_relation")
+    userId    Int
+
+    block     User   @relation(fields: [blockId], references: [id], name: "blocked_users_relation")
+    blockId   Int
+}

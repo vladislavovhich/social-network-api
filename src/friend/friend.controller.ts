@@ -6,6 +6,8 @@ import { GetUser } from 'src/common/decorators/extract-user.decorator';
 import { FriendRequestDto } from './dto/friend-request.dto';
 import { HandleFriendRequestDto } from './dto/handle-friend-request.dto';
 import { AccessTokenGuard } from 'src/auth/guards/access-token.guard';
+import { BlockUserDto } from './dto/block-user.dto';
+import { UserBlockGuard } from './guards/user-blocked.guard';
 
 @ApiTags("Friend")
 @Controller('/')
@@ -30,8 +32,33 @@ export class FriendController {
     return this.friendService.getFriends(user.id)
   }
 
-  @Delete("/users/friends/:id")
+  @Get("/users/:id/block")
   @UseGuards(AccessTokenGuard)
+  blockUser(@Param("id", ParseIntPipe) blockId: number, @GetUser() user: User) {
+    const blockDto = new BlockUserDto()
+
+    blockDto.blockId = blockId
+    blockDto.userId = user.id
+
+    return this.friendService.blockUser(blockDto)
+  }
+
+  @Get("/users/:id/unblock")
+  @UseGuards(AccessTokenGuard)
+  unblockUser(@Param("id", ParseIntPipe) blockId: number, @GetUser() user: User) {
+    const blockDto = new BlockUserDto()
+
+    blockDto.blockId = blockId
+    blockDto.userId = user.id
+
+    return this.friendService.unblockUser(blockDto)
+  }
+
+
+  @Delete("/users/friends/:id")
+
+  @UseGuards(AccessTokenGuard)
+
   deleteFriend(
     @GetUser() user: User,
     @Param("id", ParseIntPipe) id: number
@@ -44,8 +71,12 @@ export class FriendController {
     return this.friendService.getFriends(userId)
   }
 
-  @Post('/users/:id/add-friend')
+
+  @Post('/users/:id/friends-request')
+
+  @UseGuards(UserBlockGuard)
   @UseGuards(AccessTokenGuard)
+
   addUserToFriends(
     @Param("id", ParseIntPipe) id: number,
     @GetUser() user: User,

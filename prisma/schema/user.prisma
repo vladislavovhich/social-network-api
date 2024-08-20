@@ -7,9 +7,15 @@ model User {
     isVerified  Boolean @default(false)
     birthDate   DateTime
 
+    blockedByMeUsers UserBlock[] @relation(name: "me_blocked_users_relation")
+    meBlockedAt UserBlock[] @relation(name: "blocked_users_relation")
+
     friendRequestsToMe FriendRequest[] @relation(name: "user_to_relation")
     friendRequestsFromMe FriendRequest[] @relation(name: "user_from_relation")
     
+    sendedMessages Message[] @relation(name: "message_sender_relation")
+    sendedToMeMessages Message[] @relation(name: "message_receiver_relation")
+
     friends1 Friend[] @relation(name: "user_first_friend")
     friends2 Friend[] @relation(name: "user_second_friend")
 

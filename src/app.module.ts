@@ -22,6 +22,7 @@ import { PrismaErrorFilter } from './common/filters/prisma-error.filter';
 import { BanModule } from './ban/ban.module';
 import { RuleModule } from './rule/rule.module';
 import { FriendModule } from './friend/friend.module';
+import { MessageModule } from './message/message.module';
 
 @Module({
   imports: [
@@ -61,7 +62,7 @@ import { FriendModule } from './friend/friend.module';
     CategoryModule, 
     PostModule, 
     GroupModule, 
-    ViewModule, VoteModule, CommentModule, PrismaModule, BanModule, RuleModule, FriendModule],
+    ViewModule, VoteModule, CommentModule, PrismaModule, BanModule, RuleModule, FriendModule, MessageModule],
   controllers: [],
   providers: [
     {

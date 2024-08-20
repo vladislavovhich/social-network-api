@@ -3,6 +3,7 @@ import { PrismaService } from 'src/prisma/prisma.service';
 import { FriendRequestDto } from './dto/friend-request.dto';
 import { HandleFriendRequestDto } from './dto/handle-friend-request.dto';
 import { UserInfoDto } from 'src/user/dto/user-info.dto';
+import { BlockUserDto } from './dto/block-user.dto';
 
 @Injectable()
 export class FriendService {
@@ -151,9 +152,15 @@ export class FriendService {
     })
   }
 
+  async checkUsers(id1: number, id2: number) {
+    const user1 = await this.prisma.user.findFirstOrThrow({where: {id: id1}})
+    const user2 = await this.prisma.user.findFirstOrThrow({where: {id: id2}})
+
+    return {user1, user2}
+  }
+
   async isAlreadyFriends(userFromId: number, userToId: number) {
-    const user1 = await this.prisma.user.findFirstOrThrow({where: {id: userFromId}})
-    const user2 = await this.prisma.user.findFirstOrThrow({where: {id: userToId}})
+    const {user1, user2} = await this.checkUsers(userFromId, userToId)
 
     const isFriends = await this.prisma.friend.findFirst({
       where: {
@@ -165,5 +172,52 @@ export class FriendService {
     })
 
     return {user1, user2, isFriends}
+  }
+
+  async isBlocked(userId: number, blockId: number) {
+    return await this.prisma.userBlock.findFirst({
+      where: {
+        userId,
+        blockId
+      }
+    })
+  }
+
+  async blockUser(blockUserDto: BlockUserDto) {
+    const {userId, blockId} = blockUserDto
+    
+    await this.checkUsers(userId, blockId)
+
+    if (userId == blockId) {
+      throw new BadRequestException("You can't block yourself!")
+    }
+
+    const isBlocked = await this.isBlocked(userId, blockId)
+
+    if (isBlocked) {
+      throw new BadRequestException("User is already blocked, so you can't block him!")
+    }
+
+    await this.prisma.userBlock.create({
+      data: {
+        userId, blockId
+      }
+    })
+  }
+
+  async unblockUser(blockUserDto: BlockUserDto) {
+    const {userId, blockId} = blockUserDto
+    
+    await this.checkUsers(userId, blockId)
+
+    const isBlocked = await this.isBlocked(userId, blockId)
+
+    if (!isBlocked) {
+      throw new BadRequestException("User isn't blocked, so you can't unblock him!")
+    }
+
+    await this.prisma.userBlock.deleteMany({
+      where: {userId, blockId}
+    })
   }
 }
