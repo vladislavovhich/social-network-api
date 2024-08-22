@@ -204,6 +204,7 @@ export class PostService {
           select: {
             id: true,
             username: true,
+            pfp: true,
             images: {
               select: {
                 image: true

@@ -6,6 +6,9 @@ model Group {
     admin User @relation(fields: [adminId], references: [id])
     adminId Int
 
+    pfp       Image? @relation(fields: [pfpId], references: [id])
+    pfpId     Int?
+
     moderators GroupModerator[]
     posts Post[]
     subs GroupSub[]

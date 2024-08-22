@@ -1,6 +1,6 @@
 import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, ParseIntPipe, Put, Query } from '@nestjs/common';
 import { MessageService } from './message.service';
-import { ApiTags } from '@nestjs/swagger';
+import { ApiBadRequestResponse, ApiForbiddenResponse, ApiNotFoundResponse, ApiOkResponse, ApiTags, ApiUnauthorizedResponse } from '@nestjs/swagger';
 import { SendMessageDto } from './dto/send-message.dto';
 import { AccessTokenGuard } from 'src/auth/guards/access-token.guard';
 import { UserBlockGuard } from 'src/friend/guards/user-blocked.guard';
@@ -10,6 +10,7 @@ import { EditMessageDto } from './dto/edit-message.dto';
 import { MessageReadDto } from './dto/message-read.dto';
 import { MessageBlockGuard } from './guards/message-block.guard';
 import { PaginationDto } from 'src/common/dto/pagination.dto';
+import { UserDialogsResponseDto } from './dto/user-dialogs-response.dto';
 
 @Controller('/')
 @ApiTags("Message")
@@ -18,6 +19,9 @@ export class MessageController {
 
 
   @Get("/users/dialogs")
+
+  @ApiOkResponse({type: UserDialogsResponseDto})
+  @ApiUnauthorizedResponse({description: "Not authorized"})
 
   @UseGuards(AccessTokenGuard)
 
@@ -31,6 +35,11 @@ export class MessageController {
   
   @Get("/users/:id/messages") 
 
+  @ApiOkResponse({type: UserDialogsResponseDto})
+  @ApiNotFoundResponse({description: "User not found"})
+  @ApiBadRequestResponse({description: "Incorrect input data"})
+  @ApiUnauthorizedResponse({description: "Not authorized"})
+
   @UseGuards(AccessTokenGuard)
 
   getMessagesWithUser(
@@ -43,6 +52,10 @@ export class MessageController {
 
 
   @Post("/users/:id/message")
+
+  @ApiNotFoundResponse({description: "User not found"})
+  @ApiBadRequestResponse({description: "Incorrect input data"})
+  @ApiUnauthorizedResponse({description: "Not authorized"})
 
   @UseGuards(UserBlockGuard)
   @UseGuards(AccessTokenGuard)
@@ -61,6 +74,11 @@ export class MessageController {
 
   @Patch("/messages/:id")
 
+  @ApiNotFoundResponse({description: "Message not found"})
+  @ApiBadRequestResponse({description: "Incorrect input data"})
+  @ApiUnauthorizedResponse({description: "Not authorized"})
+  @ApiForbiddenResponse({description: "You cant edit the message"})
+
   @UseGuards(MessageBlockGuard)
   @UseGuards(AccessTokenGuard)
 
@@ -78,6 +96,11 @@ export class MessageController {
 
   @Put("/messages/:id/mark-as-read")
 
+  @ApiNotFoundResponse({description: "Message not found"})
+  @ApiBadRequestResponse({description: "Incorrect input data"})
+  @ApiUnauthorizedResponse({description: "Not authorized"})
+  @ApiForbiddenResponse({description: "You cant mark the message as read"})
+ 
   @UseGuards(MessageBlockGuard)
   @UseGuards(AccessTokenGuard)
 

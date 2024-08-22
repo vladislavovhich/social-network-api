@@ -8,12 +8,12 @@ export class UserInfoDto {
     @ApiProperty()
     username: string;
 
-    @ApiProperty({type: [GetImageDto]})
-    images: GetImageDto[]
+    @ApiProperty()
+    pfp: GetImageDto
 
     constructor(user: any) {
         this.id = user.id
         this.username = user.username
-        this.images = user.images.map(image => new GetImageDto(image.image))
+        this.pfp = user.pfp ? new GetImageDto(user.pfp) : null
     }
 }

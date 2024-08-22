@@ -4,6 +4,10 @@ import { FriendRequestDto } from './dto/friend-request.dto';
 import { HandleFriendRequestDto } from './dto/handle-friend-request.dto';
 import { UserInfoDto } from 'src/user/dto/user-info.dto';
 import { BlockUserDto } from './dto/block-user.dto';
+import { GetFriendReqDto } from './dto/get-friend-req.dto';
+import { PaginationDto } from 'src/common/dto/pagination.dto';
+import { FriendReqResponseDto } from './dto/friend-req-response.dto';
+import { GroupSubsResponseDto } from 'src/group/dto/group-subs-response.dto';
 
 @Injectable()
 export class FriendService {
@@ -51,24 +55,40 @@ export class FriendService {
     })
   }
 
-  async getFriendRequestsTo(userId: number) {
-    return await this.prisma.friendRequest.findMany({
+  async getFriendRequests(userId: number, paginationDto: PaginationDto, fromMe = true) {
+    const {pageSize, offset} = paginationDto
+
+    const requests = await this.prisma.friendRequest.findMany({
       where: {
-        userToId: userId
-      }
+        ...(fromMe ? {userToId: userId} : {userFromId: userId})
+      },
+      include: {
+        userFrom: {
+          include: {
+            pfp: true
+          }
+        },
+        userTo: {
+          include: {
+            pfp: true
+          }
+        }
+      },
+      take: pageSize,
+      skip: offset
     })
+
+    const count = await this.prisma.friendRequest.count({ where: { userToId: userId }})
+
+    const reqDtos = requests.map(req => new GetFriendReqDto(req, fromMe ? req.userFrom : req.userTo))
+
+    return new FriendReqResponseDto(reqDtos, count, paginationDto)
   }
 
-  async getFriendRequestsFrom(userId: number) {
-    return await this.prisma.friendRequest.findMany({
-      where: {
-        userFromId: userId
-      }
-    })
-  }
-
-  async getFriends(userId: number) {
+  async getFriends(userId: number, paginationDto: PaginationDto) {
     await this.prisma.user.findFirstOrThrow({where: {id: userId}})
+
+    const {pageSize, offset} = paginationDto
 
     const friends = await this.prisma.friend.findMany({
       where: {
@@ -80,25 +100,48 @@ export class FriendService {
       include: {
         userFirst: {
           include: {
+            pfp: true,
             images: {
               include: {
                 image: true
               }
             }
           }
-        }
-      }
+        },
+        userSecond: {
+          include: {
+            pfp: true,
+            images: {
+              include: {
+                image: true
+              }
+            }
+          }
+        },
+      },
+      take: pageSize,
+      skip: offset
     })
+
+    const count = await this.prisma.friend.count({
+      where: {
+        OR: [
+          {userFirstId: userId},
+          {userSecondId: userId}
+        ]
+    }})
 
     const users = friends.map(friend => {
       if (friend.userFirstId == userId) {
-        return friend.userSecondId
+        return friend.userSecond
       } else {
         return friend.userFirst
       }
     })
 
-    return users.map(user => new UserInfoDto(user))
+    const userDtos = users.map(user => new UserInfoDto(user))
+
+    return new GroupSubsResponseDto(userDtos, count, paginationDto)
   }
 
   async handleFriendRequest(handleRequestDto: HandleFriendRequestDto) {

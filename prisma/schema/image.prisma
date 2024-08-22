@@ -5,6 +5,8 @@ model Image {
     users UserImage[]
     posts PostImage[]
     groups GroupImage[]
+    userPfps User[]
+    groupPfps Group[]
     
     createdAt   DateTime @default(now())
     updatedAt   DateTime @updatedAt

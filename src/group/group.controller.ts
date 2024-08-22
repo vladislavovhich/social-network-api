@@ -17,6 +17,8 @@ import { PassOnly } from './decorators/pass-type.decorator';
 import { UserPassEnum } from './group.types';
 import { PassUserGuard } from './guards/pass-user.guard';
 import { ItemId } from 'src/common/decorators/item-id.decorator';
+import { GroupSubsResponseDto } from './dto/group-subs-response.dto';
+import { PaginationDto } from 'src/common/dto/pagination.dto';
 
 @ApiTags('Group')
 @Controller('groups')
@@ -71,6 +73,12 @@ export class GroupController {
     return this.groupService.removeModerator(moderatorOpDto)
   }
 
+  @Get(':id/subscribers')
+  @ApiOkResponse({type: GroupSubsResponseDto})
+
+  getGroupSubs(@Query() paginationDto: PaginationDto, @Param("id", ParseIntPipe) groupId: number) {
+    return this.groupService.getGroupSubscribers(groupId, paginationDto)
+  }
 
   @Put(':id/subscribe')
 

@@ -12,6 +12,9 @@ import { ModeratorOpDto } from './dto/moderator-op.dto';
 import { UserInfoDto } from 'src/user/dto/user-info.dto';
 import { BanService } from 'src/ban/ban.service';
 import { UserPassEnum } from './group.types';
+import { PaginationDto } from 'src/common/dto/pagination.dto';
+import { UsersResponseDto } from 'src/user/dto/users-response.dto';
+import { GroupSubsResponseDto } from './dto/group-subs-response.dto';
 
 @Injectable()
 export class GroupService {
@@ -23,6 +26,30 @@ export class GroupService {
     private readonly banService: BanService
   ) {}
 
+  async getGroupSubscribers(groupId: number, paginationDto: PaginationDto) {
+    const {pageSize, offset} = paginationDto
+
+    const subs = await this.prisma.groupSub.findMany({
+      where: {
+        groupId
+      },
+      include: {
+        user: {
+          include: {
+            pfp: true
+          }
+        }
+      },
+      take: pageSize,
+      skip: offset
+    })
+
+    const count = await this.prisma.groupSub.count({where: {groupId}})
+
+    const subDtos = subs.map(sub => new UserInfoDto(sub.user))
+
+    return new GroupSubsResponseDto(subDtos, count, paginationDto)
+  }
   async isActionAllowed(groupId: number, userId: number, passType: UserPassEnum, throwExp: boolean = true) {
     const isAdmin = await this.isAdmin(groupId, userId)
     const isModerator = await this.isModerator(userId, groupId)
@@ -126,8 +153,9 @@ export class GroupService {
                 images: {
                   include: {
                     image: true
-                  }
-                }
+                  },
+                },
+                pfp: true
               }
             }
           }
@@ -188,7 +216,12 @@ export class GroupService {
   async create(createGroupDto: CreateGroupDto) {
     const {adminId, name, description, file, categories: categoryNames} = createGroupDto
 
-    const categories = await this.categoryService.handleCategories(categoryNames, adminId)
+    let categories = []
+
+    if (categoryNames && categoryNames.length) {
+      categories = await this.categoryService.handleCategories(categoryNames, adminId)
+    }
+
     const images: Image[] = []
 
     if (file) {
@@ -202,6 +235,7 @@ export class GroupService {
         name,
         description,
         admin: {connect: {id: adminId}},
+        ...(images.length ? {pfp: {connect: {id: images[0].id}}} : {}),
         categories: {
           create: categories.map(cat => ({category: {connect: {id: cat.id}}}))
         }
@@ -222,6 +256,7 @@ export class GroupService {
             category: true
           }
         },
+        pfp: true,
         images: {
           include: {
             image: true
@@ -229,6 +264,7 @@ export class GroupService {
         },
         admin: {
           include: {
+            pfp: true,
             images: {
               include: {
                 image: true
@@ -301,7 +337,12 @@ export class GroupService {
    
     const {adminId, name, description, file, categories: categoryNames} = updateGroupDto
 
-    const categories = await this.categoryService.handleCategories(categoryNames, adminId)
+    let categories = []
+
+    if (categoryNames && categoryNames.length) {
+      categories = await this.categoryService.handleCategories(categoryNames, adminId)
+    }
+  
     const images: Image[] = []
 
     if (file) {
@@ -314,6 +355,7 @@ export class GroupService {
       where: {id},
       data: {
         name,
+        ...(images.length ? {pfp: {connect: {id: images[0].id}}} : {}),
         description,
         categories: {
           create: categories.map(cat => ({category: {connect: {id: cat.id}}}))

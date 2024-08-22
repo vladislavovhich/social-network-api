@@ -51,6 +51,7 @@ export class CommentService {
       include: {
         commenter: {
           include: {
+            pfp: true,
             images: {
               include: {
                 image: true
@@ -77,6 +78,7 @@ export class CommentService {
       include: {
         commenter: {
           include: {
+            pfp: true,
             images: {
               include: {
                 image: true

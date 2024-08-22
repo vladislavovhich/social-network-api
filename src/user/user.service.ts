@@ -77,11 +77,7 @@ export class UserService {
             group: true
           }
         },
-        images: {
-          select: {
-            image: true
-          }
-        }
+        pfp: true
       }
     }
   }
@@ -113,6 +109,7 @@ export class UserService {
         password, 
         username, 
         birthDate,
+        ...(images.length ? {pfp: {connect: {id: images[0].id}}} : {}),
         images: {
           create: images.map(image => ({image: {connect: {id: image.id}}}))
         }
@@ -169,6 +166,7 @@ export class UserService {
       data: { 
         username, 
         birthDate,
+        ...(images.length ? {pfp: {connect: {id: images[0].id}}} : {}),
         images: {
           create: images.map(image => ({image: {connect: {id: image.id}}}))
         }

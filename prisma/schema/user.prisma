@@ -6,6 +6,9 @@ model User {
     token       String? @default("")
     isVerified  Boolean @default(false)
     birthDate   DateTime
+    
+    pfp       Image? @relation(fields: [pfpId], references: [id])
+    pfpId     Int?
 
     blockedByMeUsers UserBlock[] @relation(name: "me_blocked_users_relation")
     meBlockedAt UserBlock[] @relation(name: "blocked_users_relation")

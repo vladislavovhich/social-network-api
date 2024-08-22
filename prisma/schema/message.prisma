@@ -7,6 +7,8 @@ model Message {
     receiver     User?    @relation(fields: [receiverId], references: [id], name: "message_receiver_relation")
     receiverId   Int?
 
+    dialog_between String
+
     text         String
     isSeen       Boolean @default(false)
 

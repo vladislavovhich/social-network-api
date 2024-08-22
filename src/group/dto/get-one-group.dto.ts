@@ -26,8 +26,8 @@ export class GetOneGroupDto {
     @ApiProperty({type: [GetCategoryDto]})
     categories: GetCategoryDto[]
 
-    @ApiProperty({type: [GetImageDto]})
-    images: GetImageDto[]
+    @ApiProperty()
+    pfp: GetImageDto;
 
     constructor(group: any) {
         this.id = group.id
@@ -35,7 +35,7 @@ export class GetOneGroupDto {
         this.description = group.description
         this.totalSubs = group._count.subs
         this.categories = group.categories.map(category => new GetCategoryDto(category.category))
-        this.images = group.images.map(image => new GetImageDto(image.image))
+        this.pfp = group.pfp ? new GetImageDto(group.pfp) : null
         this.admin = new UserInfoDto(group.admin)
         this.created_at = group.createdAt
     }

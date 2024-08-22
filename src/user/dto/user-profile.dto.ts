@@ -22,14 +22,14 @@ export class UserProfileDto {
     @ApiProperty({type: [GetGroupDto]})
     groups: GetGroupDto[]
 
-    @ApiProperty({type: [GetImageDto]})
-    images: GetImageDto[]
+    @ApiProperty()
+    pfp: GetImageDto
 
     constructor(user: any) {
         this.id = user.id
         this.username = user.username
         this.email = user.email
-        this.images = user.images.map(image => new GetImageDto(image.image))
+        this.pfp = user.pfp ? new GetImageDto(user.pfp) : null
         this.groups = user.groups.map(group => new GetGroupDto(group.group))
         this.created_at = user.createdAt
         this.birthDate = user.birthDate
