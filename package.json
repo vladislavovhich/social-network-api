@@ -44,6 +44,7 @@
     "pug": "^3.0.3",
     "reflect-metadata": "^0.2.0",
     "rxjs": "^7.8.1",
+    "svg-captcha": "^1.4.0",
     "typeorm": "^0.3.20"
   },
   "devDependencies": {

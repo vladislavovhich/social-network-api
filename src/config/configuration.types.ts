@@ -15,6 +15,7 @@ export type JwtConfig = {
     access: JwtOptions
     refresh: JwtOptions
     confirm: JwtOptions
+    passwordChange: JwtOptions
 }
 
 export type MailConfig = {

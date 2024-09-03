@@ -21,6 +21,10 @@ export default () => ({
         confirm: {
             expire: process.env.JWT_EMAIL_CONFIRM_EXPIRE,
             secret: process.env.JWT_EMAIL_CONFIRM_SECRET
+        },
+        passwordChange: {
+            expire: process.env.JWT_PASSWORD_CHANGE_EXPIRE,
+            secret: process.env.JWT_PASSWORD_CHANGE_SECRET
         }
     },
     mail: {
